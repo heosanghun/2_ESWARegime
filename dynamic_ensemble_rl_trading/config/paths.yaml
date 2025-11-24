@@ -1,0 +1,19 @@
+# Path configuration file
+
+data:
+  raw: "data/raw"
+  processed: "data/processed"
+  charts: "data/raw/charts"
+
+models:
+  base: "models"
+  regime_classifier: "models/regime_classifier"
+  ppo_agents: "models/ppo_agents"
+  checkpoints: "models/checkpoints"
+
+results:
+  base: "results"
+  backtest: "results/backtest"
+  plots: "results/plots"
+  logs: "results/logs"
+

@@ -1,0 +1,40 @@
+# Hyperparameters for Dynamic Ensemble RL Trading System
+
+# Regime Classifier (XGBoost)
+regime_classifier:
+  n_estimators: 100
+  max_depth: 6
+  learning_rate: 0.1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+
+# PPO Agent
+ppo:
+  learning_rate: 0.0003
+  batch_size: 64
+  n_steps: 2048
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  policy_kwargs:
+    net_arch: [256, 256]
+    activation_fn: "tanh"
+
+# Training
+training:
+  total_timesteps: 1000000
+  eval_freq: 10000
+  save_freq: 50000
+  log_interval: 10
+
+# Environment
+environment:
+  action_space_size: 5
+  max_position: 1.0
+  initial_balance: 10000.0
+

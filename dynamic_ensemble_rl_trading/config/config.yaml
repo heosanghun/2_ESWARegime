@@ -1,0 +1,64 @@
+# Main configuration file for Dynamic Ensemble RL Trading System
+
+# Data paths
+data:
+  ohlcv_path: "data/raw/ohlcv_data.csv"
+  news_path: "data/cryptonews_2021-10-12_2023-12-19.csv"
+  chart_images_path: "data/raw/charts/"
+  processed_path: "data/processed/"
+
+# Model paths
+models:
+  regime_classifier: "models/regime_classifier/"
+  ppo_agents: "models/ppo_agents/"
+  checkpoints: "models/checkpoints/"
+
+# Results paths
+results:
+  backtest: "results/backtest/"
+  plots: "results/plots/"
+  logs: "results/logs/"
+
+# Training settings
+training:
+  initial_capital: 10000.0
+  transaction_fee: 0.0005  # 0.05%
+  slippage: 0.0002  # 0.02%
+  train_start_date: "2021-10-12"
+  train_end_date: "2023-06-19"
+  test_start_date: "2023-06-19"
+  test_end_date: "2023-12-19"
+
+# Regime classification
+regime:
+  confidence_threshold: 0.6
+  sma_window: 50
+  bull_threshold: 0.0005  # 0.05%
+  bear_threshold: -0.0005  # -0.05%
+
+# Ensemble settings
+ensemble:
+  temperature: 10.0
+  performance_window: 30  # days
+  num_agents_per_pool: 5
+
+# Feature extraction
+features:
+  visual:
+    image_size: 224
+    lookback_hours: 60
+    use_resnet: true
+  
+  technical:
+    indicators: ["SMA", "EMA", "RSI", "MACD", "ATR", "BB"]
+    normalization_window: 30
+  
+  sentiment:
+    aggregation_window: 24  # hours
+    use_ewma: true
+
+# Logging
+logging:
+  level: "INFO"
+  log_file: "results/logs/system.log"
+
