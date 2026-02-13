@@ -95,17 +95,27 @@ class MarketDataHandler:
             logger.error(f"Error loading CSV file: {e}")
             raise
         
-        # Parse date column
-        if self.date_column in df.columns:
-            df[self.date_column] = pd.to_datetime(
-                df[self.date_column],
+        # Parse date column (try multiple candidates)
+        date_col = None
+        for candidate in [self.date_column, 'timestamp', 'date', 'Date', 'Timestamp', 'datetime']:
+            if candidate in df.columns:
+                date_col = candidate
+                break
+
+        if date_col is not None:
+            df[date_col] = pd.to_datetime(
+                df[date_col],
                 format='mixed',
                 errors='coerce'
             )
-            df.set_index(self.date_column, inplace=True)
+            df.set_index(date_col, inplace=True)
+        elif df.index.dtype == 'object' or 'datetime' in str(df.index.dtype):
+            # Index may already be datetime
+            df.index = pd.to_datetime(df.index, format='mixed', errors='coerce')
         else:
             raise ValueError(
-                f"Date column '{self.date_column}' not found in data"
+                f"Date column '{self.date_column}' not found in data. "
+                f"Available columns: {list(df.columns)}"
             )
         
         # Validate OHLCV columns

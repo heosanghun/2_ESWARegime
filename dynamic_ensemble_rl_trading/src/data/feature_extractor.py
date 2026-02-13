@@ -10,23 +10,19 @@ import numpy as np
 from typing import Dict, List, Optional
 import logging
 
+# Use manual calculation to avoid dependency issues
+# pandas_ta has compatibility issues with Python 3.13
+PANDAS_TA_AVAILABLE = False
+TALIB_AVAILABLE = False
+
 try:
-    import pandas_ta as ta
+    import talib
+    TALIB_AVAILABLE = True
 except ImportError:
-    try:
-        import talib
-        TALIB_AVAILABLE = True
-        PANDAS_TA_AVAILABLE = False
-    except ImportError:
-        TALIB_AVAILABLE = False
-        PANDAS_TA_AVAILABLE = False
-        logging.warning(
-            "Neither pandas_ta nor talib available. "
-            "Technical indicators will be calculated manually."
-        )
-else:
-    PANDAS_TA_AVAILABLE = True
     TALIB_AVAILABLE = False
+    logging.info(
+        "TA-Lib not available. Technical indicators will be calculated manually."
+    )
 
 logger = logging.getLogger(__name__)
 

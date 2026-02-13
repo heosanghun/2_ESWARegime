@@ -102,7 +102,7 @@ class PerformanceMetrics:
     def calculate_sharpe_ratio(
         self,
         returns: np.ndarray,
-        periods_per_year: int = 252
+        periods_per_year: int = 8760  # 24*365 for hourly crypto
     ) -> float:
         """
         Calculate Sharpe Ratio.
@@ -261,13 +261,16 @@ class PerformanceMetrics:
             returns = np.diff(portfolio_values) / portfolio_values[:-1]
         
         if num_years is None:
-            # Estimate years (assuming daily data)
-            num_years = len(portfolio_values) / 252.0
+            # Estimate years (assuming hourly crypto data: 8760 hours/year)
+            num_years = len(portfolio_values) / 8760.0
         
+        # Use 8760 for hourly crypto (24*365)
+        periods_per_year = 8760
+
         metrics = {
             'cumulative_return': self.calculate_cumulative_return(portfolio_values),
             'cagr': self.calculate_cagr(portfolio_values, num_years),
-            'sharpe_ratio': self.calculate_sharpe_ratio(returns),
+            'sharpe_ratio': self.calculate_sharpe_ratio(returns, periods_per_year),
             'max_drawdown': self.calculate_max_drawdown(portfolio_values),
             'win_rate': self.calculate_win_rate(returns),
             'profit_factor': self.calculate_profit_factor(returns)

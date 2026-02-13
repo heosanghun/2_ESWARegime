@@ -9,6 +9,7 @@ import numpy as np
 from typing import Optional, Dict, Any
 from pathlib import Path
 import logging
+import torch.nn as nn
 
 try:
     from stable_baselines3 import PPO
@@ -88,8 +89,23 @@ class PPOAgent:
         if policy_kwargs is None:
             policy_kwargs = {
                 'net_arch': [256, 256],
-                'activation_fn': 'tanh'
+                'activation_fn': nn.Tanh
             }
+        else:
+            # Convert string activation function names to actual functions
+            if isinstance(policy_kwargs.get('activation_fn'), str):
+                activation_name = policy_kwargs['activation_fn'].lower()
+                if activation_name == 'tanh':
+                    policy_kwargs['activation_fn'] = nn.Tanh
+                elif activation_name == 'relu':
+                    policy_kwargs['activation_fn'] = nn.ReLU
+                elif activation_name == 'elu':
+                    policy_kwargs['activation_fn'] = nn.ELU
+                elif activation_name == 'gelu':
+                    policy_kwargs['activation_fn'] = nn.GELU
+                else:
+                    logger.warning(f"Unknown activation function: {activation_name}, using Tanh")
+                    policy_kwargs['activation_fn'] = nn.Tanh
         
         if STABLE_BASELINES3_AVAILABLE:
             self.model = PPO(

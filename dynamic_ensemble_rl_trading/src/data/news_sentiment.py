@@ -113,6 +113,11 @@ class NewsSentimentExtractor:
         """
         Parse sentiment column from string format to structured data.
         
+        Supports multiple formats:
+        - Dict format: {'class': 'positive', 'polarity': 0.5, 'subjectivity': 0.3}
+        - Simple string: 'positive', 'neutral', 'negative'
+        - Already parsed columns: sentiment_polarity, sentiment_subjectivity exist
+        
         Parameters
         ----------
         df : pd.DataFrame
@@ -123,26 +128,69 @@ class NewsSentimentExtractor:
         pd.DataFrame
             DataFrame with parsed sentiment columns.
         """
+        # Check if already parsed
+        if 'sentiment_polarity' in df.columns and 'sentiment_subjectivity' in df.columns:
+            if 'sentiment_class' not in df.columns:
+                # Derive class from polarity
+                df['sentiment_class'] = df['sentiment_polarity'].apply(
+                    lambda x: 'positive' if x > 0.1 else ('negative' if x < -0.1 else 'neutral')
+                )
+            return df
+        
+        # Check if sentiment column exists
         if 'sentiment' not in df.columns:
             raise ValueError("'sentiment' column not found")
         
         # Parse sentiment strings
         sentiments = []
-        for sent_str in df['sentiment']:
+        for idx, sent_str in enumerate(df['sentiment']):
             try:
                 if isinstance(sent_str, str):
-                    # Parse string representation of dict
-                    sent_dict = ast.literal_eval(sent_str)
+                    # Try parsing as dict first
+                    try:
+                        sent_dict = ast.literal_eval(sent_str)
+                        if isinstance(sent_dict, dict):
+                            sentiments.append({
+                                'class': sent_dict.get('class', 'neutral'),
+                                'polarity': sent_dict.get('polarity', 0.0),
+                                'subjectivity': sent_dict.get('subjectivity', 0.0)
+                            })
+                        else:
+                            raise ValueError("Not a dict")
+                    except (ValueError, SyntaxError):
+                        # If not a dict, treat as simple class string
+                        sent_class = sent_str.lower().strip()
+                        if sent_class in ['positive', 'neutral', 'negative']:
+                            # Use existing polarity/subjectivity if available
+                            polarity = df.loc[df.index[idx], 'sentiment_polarity'] if 'sentiment_polarity' in df.columns else 0.0
+                            subjectivity = df.loc[df.index[idx], 'sentiment_subjectivity'] if 'sentiment_subjectivity' in df.columns else 0.0
+                            
+                            # Set default polarity based on class if not available
+                            if 'sentiment_polarity' not in df.columns:
+                                if sent_class == 'positive':
+                                    polarity = 0.5
+                                elif sent_class == 'negative':
+                                    polarity = -0.5
+                                else:
+                                    polarity = 0.0
+                            
+                            sentiments.append({
+                                'class': sent_class,
+                                'polarity': polarity,
+                                'subjectivity': subjectivity
+                            })
+                        else:
+                            raise ValueError(f"Unknown sentiment class: {sent_str}")
+                elif isinstance(sent_str, dict):
+                    sentiments.append({
+                        'class': sent_str.get('class', 'neutral'),
+                        'polarity': sent_str.get('polarity', 0.0),
+                        'subjectivity': sent_str.get('subjectivity', 0.0)
+                    })
                 else:
-                    sent_dict = sent_str
-                
-                sentiments.append({
-                    'class': sent_dict.get('class', 'neutral'),
-                    'polarity': sent_dict.get('polarity', 0.0),
-                    'subjectivity': sent_dict.get('subjectivity', 0.0)
-                })
+                    raise ValueError(f"Unexpected sentiment type: {type(sent_str)}")
             except Exception as e:
-                logger.warning(f"Error parsing sentiment: {e}")
+                logger.warning(f"Error parsing sentiment at index {idx}: {e}")
                 sentiments.append({
                     'class': 'neutral',
                     'polarity': 0.0,
@@ -152,8 +200,12 @@ class NewsSentimentExtractor:
         # Add parsed sentiment columns
         sentiment_df = pd.DataFrame(sentiments)
         df['sentiment_class'] = sentiment_df['class']
-        df['sentiment_polarity'] = sentiment_df['polarity']
-        df['sentiment_subjectivity'] = sentiment_df['subjectivity']
+        
+        # Only add polarity/subjectivity if not already present
+        if 'sentiment_polarity' not in df.columns:
+            df['sentiment_polarity'] = sentiment_df['polarity']
+        if 'sentiment_subjectivity' not in df.columns:
+            df['sentiment_subjectivity'] = sentiment_df['subjectivity']
         
         return df
     

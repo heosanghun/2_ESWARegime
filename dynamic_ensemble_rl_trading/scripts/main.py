@@ -35,9 +35,20 @@ logger = setup_logger(__name__, level="INFO")
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
-    """Load configuration from YAML file."""
-    with open(config_path, 'r') as f:
+    """Load configuration from YAML file (main + hyperparameters)."""
+    config_path = Path(config_path)
+    config_dir = config_path.parent
+    with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
+    hyperparams_path = config_dir / 'hyperparameters.yaml'
+    if hyperparams_path.exists():
+        with open(hyperparams_path, 'r', encoding='utf-8') as f:
+            config['hyperparameters'] = yaml.safe_load(f)
+    else:
+        config['hyperparameters'] = {
+            'regime_classifier': {'n_estimators': 100, 'max_depth': 6, 'learning_rate': 0.1},
+            'training': {'total_timesteps': 1000000},
+        }
     return config
 
 
@@ -167,8 +178,12 @@ def initialize_system(config: Dict[str, Any]) -> Dict[str, Any]:
         temperature=config['ensemble']['temperature']
     )
     
+    # Single env for execution so portfolio is consistent across steps
+    execution_env = bull_env
+    execution_env.reset()
+
     logger.info("System initialization completed")
-    
+
     return {
         'ohlcv_data': ohlcv_data,
         'state_data': state_data,
@@ -178,6 +193,7 @@ def initialize_system(config: Dict[str, Any]) -> Dict[str, Any]:
         'bull_env': bull_env,
         'bear_env': bear_env,
         'sideways_env': sideways_env,
+        'execution_env': execution_env,
         'config': config
     }
 
@@ -255,23 +271,11 @@ def main_trading_loop(system_components: Dict[str, Any]) -> Dict[str, Any]:
         action = ensemble_result['action']
         weights = ensemble_result['weights']
         
-        # Step 5: Execute action using active environment
-        # Use the environment corresponding to current regime
-        if current_regime == 'Bull':
-            active_env = system_components.get('bull_env')
-        elif current_regime == 'Bear':
-            active_env = system_components.get('bear_env')
-        else:
-            active_env = system_components.get('sideways_env')
-        
-        if active_env is not None:
-            # Execute action in environment
-            next_obs, reward, terminated, truncated, info = active_env.step(action)
-            
-            # Update portfolio value from environment
+        # Step 5: Execute action in a single env so portfolio stays in sync
+        execution_env = system_components.get('execution_env')
+        if execution_env is not None:
+            next_obs, reward, terminated, truncated, info = execution_env.step(action)
             portfolio_value = info.get('portfolio_value', portfolio_value)
-            
-            # Update agent performance for weighting
             if 'agent_index' in info:
                 ensemble_trader.update_agent_performance(
                     info['agent_index'],

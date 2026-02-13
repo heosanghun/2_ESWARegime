@@ -99,12 +99,22 @@ class RegimeClassifier:
         
         if validation_data is not None:
             X_val, y_val = validation_data
-            self.model.fit(
-                X, y,
-                eval_set=[(X_val, y_val)],
-                early_stopping_rounds=10,
-                verbose=False
-            )
+            # XGBoost 2.0+ uses early_stopping_rounds in constructor or via callbacks
+            try:
+                # Try new API (XGBoost 2.0+)
+                self.model.fit(
+                    X, y,
+                    eval_set=[(X_val, y_val)],
+                    verbose=False
+                )
+            except TypeError:
+                # Fallback for older versions
+                self.model.fit(
+                    X, y,
+                    eval_set=[(X_val, y_val)],
+                    early_stopping_rounds=10,
+                    verbose=False
+                )
         else:
             self.model.fit(X, y)
         

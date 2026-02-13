@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 import yaml
 import pickle
 import logging
+import numpy as np
 from src.backtest.backtester import Backtester
 from src.backtest.metrics import PerformanceMetrics
 from src.visualization.plotter import TradingPlotter
@@ -18,9 +19,16 @@ logger = setup_logger(__name__, level="INFO")
 
 
 def load_config(config_path: str):
-    """Load configuration."""
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+    """Load configuration (main + hyperparameters)."""
+    from pathlib import Path
+    p = Path(config_path)
+    with open(p, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    hp = p.parent / 'hyperparameters.yaml'
+    if hp.exists():
+        with open(hp, 'r', encoding='utf-8') as f:
+            config['hyperparameters'] = yaml.safe_load(f)
+    return config
 
 
 def evaluate_system(config):
@@ -88,12 +96,21 @@ def evaluate_system(config):
     plots_dir = Path(config['results']['plots'])
     plots_dir.mkdir(parents=True, exist_ok=True)
     
-    # Plot portfolio vs benchmark
+    # Plot portfolio vs benchmark (align lengths)
     timestamps = pd.DatetimeIndex([r['timestamp'] for r in results['trading_history']])
+    pv = np.asarray(backtest_results['portfolio_values'])
+    n_ts = len(timestamps)
+    if len(pv) > n_ts:
+        pv = pv[:n_ts]
+    elif len(pv) < n_ts:
+        timestamps = timestamps[:len(pv)]
+    bv = np.asarray(benchmark_results['portfolio_values'])
+    if len(bv) > n_ts:
+        bv = bv[:n_ts]
     plotter.plot_portfolio_vs_benchmark(
-        backtest_results['portfolio_values'],
-        benchmark_results['portfolio_values'],
-        timestamps[:len(backtest_results['portfolio_values'])],
+        pv,
+        bv,
+        timestamps,
         save_path=str(plots_dir / 'portfolio_vs_benchmark.png')
     )
     

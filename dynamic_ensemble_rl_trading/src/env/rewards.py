@@ -25,7 +25,8 @@ class RegimeRewardCalculator:
     def __init__(
         self,
         transaction_cost: float = 0.0005,  # 0.05%
-        risk_free_rate: float = 0.0
+        risk_free_rate: float = 0.0,
+        reward_scale: float = 100.0,  # Scale rewards for hourly data
     ):
         """
         Initialize the reward calculator.
@@ -36,9 +37,13 @@ class RegimeRewardCalculator:
             Transaction cost as fraction (0.05%).
         risk_free_rate : float, default=0.0
             Risk-free rate for Sortino Ratio calculation.
+        reward_scale : float, default=100.0
+            Reward scaling factor (set >1 for intra-day data where
+            per-step returns are very small).
         """
         self.transaction_cost = transaction_cost
         self.risk_free_rate = risk_free_rate
+        self.reward_scale = reward_scale
         
         # Track portfolio history for Sortino Ratio calculation
         self.portfolio_returns: list = []
@@ -75,10 +80,10 @@ class RegimeRewardCalculator:
         if portfolio_value_before <= 0:
             return 0.0
         
-        # Simple return: R = (V_{t+1} - V_t) / V_t
+        # Simple return: R = (V_{t+1} - V_t) / V_t  (scaled)
         reward = (portfolio_value_after - portfolio_value_before) / portfolio_value_before
         
-        return reward
+        return reward * self.reward_scale
     
     def calculate_bear_reward(
         self,
@@ -123,10 +128,10 @@ class RegimeRewardCalculator:
         # Calculate Sortino Ratio
         sortino_ratio = self._calculate_sortino_ratio()
         
-        # Bear reward: Sortino Ratio - C * TransactionCost
+        # Bear reward: Sortino Ratio - C * TransactionCost  (scaled)
         reward = sortino_ratio - self.transaction_cost * transaction_cost_incurred
         
-        return reward
+        return reward * self.reward_scale
     
     def calculate_sideways_reward(
         self,
@@ -165,7 +170,8 @@ class RegimeRewardCalculator:
         )
         
         # Sideways reward: R_bull - 5 * TransactionCost
-        penalty = 5.0 * self.transaction_cost * transaction_cost_incurred
+        # (Note: bull_reward already scaled)
+        penalty = 5.0 * self.transaction_cost * transaction_cost_incurred * self.reward_scale
         reward = bull_reward - penalty
         
         return reward

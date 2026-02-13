@@ -84,6 +84,44 @@ class DynamicWeightCalculator:
         
         self.agent_returns[agent_index].append(return_value)
     
+    def update_portfolio_value(
+        self,
+        agent_index: int,
+        portfolio_value: float
+    ) -> None:
+        """
+        Update portfolio value and calculate return.
+        
+        Parameters
+        ----------
+        agent_index : int
+            Index of the agent.
+        portfolio_value : float
+            Current portfolio value.
+        """
+        if agent_index >= self.num_agents:
+            raise IndexError(f"Agent index {agent_index} out of range")
+        
+        # Track portfolio values if needed
+        if not hasattr(self, 'agent_portfolio_values'):
+            self.agent_portfolio_values = {}
+        
+        if agent_index not in self.agent_portfolio_values:
+            self.agent_portfolio_values[agent_index] = []
+        
+        prev_value = (
+            self.agent_portfolio_values[agent_index][-1]
+            if len(self.agent_portfolio_values[agent_index]) > 0
+            else None
+        )
+        
+        self.agent_portfolio_values[agent_index].append(portfolio_value)
+        
+        # Calculate return if we have previous value
+        if prev_value is not None and prev_value > 0:
+            return_value = (portfolio_value - prev_value) / prev_value
+            self.update_returns(agent_index, return_value)
+    
     def calculate_sharpe_ratio(
         self,
         returns: np.ndarray
@@ -131,32 +169,40 @@ class DynamicWeightCalculator:
         Implements Eq. 6:
         w_{i,t} = exp(SR_{i,30}/T) / sum(exp(SR_{j,30}/T))
         
-        Returns
-        -------
-        np.ndarray
-            Array of weights for each agent, shape (num_agents,).
+        초기 데이터 부족 시 균등 가중치 반환.
         """
         if self.num_agents == 0:
             raise ValueError("No agents initialized. Call initialize_agents() first.")
         
         sharpe_ratios = []
+        has_sufficient_data = False
         
         for i in range(self.num_agents):
             returns = np.array(list(self.agent_returns[i]))
             
             if len(returns) < 2:
-                # Insufficient data: use default weight
                 sharpe_ratio = 0.0
             else:
                 sharpe_ratio = self.calculate_sharpe_ratio(returns)
+                has_sufficient_data = True
             
             sharpe_ratios.append(sharpe_ratio)
         
         sharpe_ratios = np.array(sharpe_ratios)
         
+        # 데이터 부족 시 균등 가중치
+        if not has_sufficient_data:
+            return np.ones(self.num_agents) / self.num_agents
+        
+        # 모든 Sharpe Ratio가 동일하면 균등 가중치
+        if np.allclose(sharpe_ratios, sharpe_ratios[0]):
+            return np.ones(self.num_agents) / self.num_agents
+        
         # Apply Softmax with temperature
         # w_i = exp(SR_i / T) / sum(exp(SR_j / T))
-        exp_scores = np.exp(sharpe_ratios / self.temperature)
+        # Negative Sharpe Ratios도 처리하기 위해 offset 추가
+        sharpe_offset = sharpe_ratios - np.min(sharpe_ratios)  # 최소값을 0으로
+        exp_scores = np.exp(sharpe_offset / self.temperature)
         weights = exp_scores / np.sum(exp_scores)
         
         # Ensure weights sum to 1

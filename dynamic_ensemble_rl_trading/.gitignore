@@ -1,0 +1,56 @@
+# ─── GitHub 업로드 제외: 데이터 파일 (용량·재현 가능) ───
+data/raw/*.csv
+data/processed/
+data/*.csv
+!data/.gitkeep
+
+# ─── 학습된 모델 (용량 큼, 사용자가 직접 학습) ───
+models/checkpoints/
+models/ppo_agents/
+models/regime_classifier/*.json
+models/regime_classifier/*.ubj
+
+# ─── 결과/로그 (재실행으로 생성 가능) ───
+results/backtest/*.pkl
+results/logs/*.log
+results/verification/*.log
+results/verification/*.json
+results/plots/*.png
+results/plots/*.html
+results/verification/improvement_history.json
+results/verification/progress_reach_100.json
+
+# ─── 설정 백업 (업로드 불필요) ───
+config/config_backup_iter_*.yaml
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# ─── 환경/IDE/기타 ───
+.env
+.env.local
+*.log
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── 대용량/미사용 ───
+*.zip
+*.pkl
+*.h5
+*.pth
+*.pt

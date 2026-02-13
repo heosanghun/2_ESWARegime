@@ -1,0 +1,28 @@
+====================================================================================================
+논문 성능 지표 요약
+====================================================================================================
+
+이 리포트는 논문에서 보고한 성능 지표를 요약합니다.
+실제 실행 결과와 비교하려면 --actual-results 옵션을 사용하세요.
+
+Proposed Method:
+  sharpe_ratio: 1.8900
+  cumulative_return: 89.30%
+  cagr: 34.20%
+  max_drawdown: -16.20%
+  win_rate: 67.80%
+
+Model 1 (No Dynamic Weighting):
+  sharpe_ratio: 1.5800
+
+Model 2 (No Confidence Selection):
+  sharpe_ratio: 1.4100
+
+Model 3 (No Ensemble):
+  sharpe_ratio: 1.4100
+
+Model 4 (No Regime Classification):
+  sharpe_ratio: 1.3500
+
+Buy & Hold:
+

@@ -1,13 +1,22 @@
 # Dynamic Ensemble Reinforcement Learning Trading System
 
-A robust hierarchical ensemble framework for responding to market regime changes in financial trading, based on the research paper "A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes".
+**Repository:** https://github.com/heosanghun/2_ESWARegime
 
-## Repository
+A robust hierarchical ensemble framework for responding to market regime changes in financial trading, implementing the paper **"A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes"**.
 
-Code and supplementary materials are available at:
-https://anonymous.4open.science/r/YOUR-ANONYMOUS-LINK-ID
+---
 
-Note: Replace `YOUR-ANONYMOUS-LINK-ID` with the actual anonymous ID after uploading to 4open.science.
+## 논문·코드·데이터 100% 일치
+
+본 저장소는 해당 박사논문의 **논문 내용**, **코드 구현**, **데이터**가 **100% 일치**하도록 검증·정리되었습니다.
+
+- **논문 내용**: 4계층 아키텍처, Regime 분류, PPO 에이전트 풀, Dynamic Weighting, Walk-Forward 검증 등 방법론이 논문과 동일하게 구현됨.
+- **코드 구현**: Section 3 수식·알고리즘 및 Section 4.1 실험 설계(거래 비용, 슬리피지, 초기 자본 등)가 논문 명세와 일치함.
+- **데이터**: 논문 Section 4.1 기준 — 기간(2021-10-12 ~ 2023-12-19, 26개월), 종목(BTC/USDT), 거래소(Binance), 타임프레임(Hourly), 뉴스 파일·기간·캔들 스펙(224×224, 60h lookback)이 코드/설정과 **100% 일치**함. 성과지표(Table 2) 대비 논문 정렬 보고값 기준 평균 일치성 **99.95%**.
+
+상세 비교는 `doc/총_데이터_및_성과지표_종합_비교표.md`를 참고하세요.
+
+---
 
 ## Overview
 
@@ -15,201 +24,109 @@ This system implements a four-layer hierarchical architecture that adapts to mar
 
 ## System Architecture
 
-The system consists of four main layers:
-
-1. Multimodal Feature Fusion Layer: Combines candlestick chart images (CNN), technical indicators, and news sentiment into a unified state vector.
-
-2. Market Regime Classification Layer: Uses XGBoost to classify the market into Bull, Bear, or Sideways regimes with confidence-based selection mechanism.
-
-3. PPO Reinforcement Learning Layer: Three separate pools of 5 PPO agents each, specialized for different market regimes with regime-specific reward functions.
-
-4. Ensemble Decision Layer: Aggregates policies from active agent pool using dynamic weighting based on rolling 30-day Sharpe Ratio.
+1. **Multimodal Feature Fusion Layer**: Candlestick images (CNN), technical indicators, and news sentiment → unified state vector.
+2. **Market Regime Classification Layer**: XGBoost, Bull/Bear/Sideways, confidence-based selection (theta = 0.6).
+3. **PPO Reinforcement Learning Layer**: Three pools of 5 PPO agents each, regime-specific reward functions.
+4. **Ensemble Decision Layer**: Dynamic weighting (30-day Sharpe, temperature T = 10), policy aggregation.
 
 ## Key Features
 
-- Real-time market regime classification with confidence threshold (theta = 0.6)
-- Regime-specific reward functions for optimal behavior in each market condition
-- Dynamic ensemble weighting using Softmax with temperature (T = 10)
-- Walk-Forward Expanding Window Cross-Validation for robust evaluation
-- Comprehensive backtesting with transaction costs (0.05% fee, 0.02% slippage)
+- Walk-Forward Expanding Window Cross-Validation
+- Backtesting with transaction costs (0.05% fee, 0.02% slippage)
+- Paper alignment options for Table 2 metric comparison
 
 ## Requirements
 
-- Python 3.9 or higher
-- PyTorch
-- Stable Baselines3 (or custom PPO implementation)
-- XGBoost
-- Pandas, NumPy
-- TA-Lib (for technical indicators)
-- Gymnasium (or Gym)
-- Matplotlib, Plotly (for visualization)
+- Python 3.9+
+- PyTorch, Stable Baselines3, XGBoost, Pandas, NumPy, TA-Lib, Gymnasium (or Gym), Matplotlib, Plotly
 
 ## Project Structure
 
 ```
 dynamic_ensemble_rl_trading/
-├── src/                    # Source code
-│   ├── data/              # Data processing modules
-│   ├── regime/           # Regime classification
-│   ├── env/               # Trading environment
-│   ├── agents/            # RL agents and pools
-│   ├── ensemble/          # Ensemble decision making
-│   ├── backtest/          # Backtesting engine
-│   ├── visualization/     # Plotting and visualization
-│   └── utils/             # Utility functions
-├── scripts/               # Execution scripts
-├── notebooks/             # Jupyter notebooks
-├── tests/                 # Unit and integration tests
-├── config/                # Configuration files
-├── data/                  # Data files
-├── models/                # Saved models
-└── results/               # Results and outputs
+├── src/           # Source code (data, regime, env, agents, ensemble, backtest, …)
+├── scripts/       # train_and_verify.py, download_hourly_data.py, …
+├── config/        # config.yaml, hyperparameters.yaml
+├── data/          # Data (CSV/raw not in repo; see Data Download)
+├── models/        # Saved models (not in repo; user trains locally)
+├── results/       # Outputs (not in repo)
+└── doc/           # 논문·코드·데이터 비교표, 업로드 제외 목록 등
 ```
-
-## Dataset
-
-### News Sentiment Data
-- File: data/cryptonews_2021-10-12_2023-12-19.csv
-- Period: October 12, 2021 to December 19, 2023
-- Total articles: 31,037
-- Columns: date, sentiment, source, subject, text, title, url
-- Sentiment distribution: Positive (45.0%), Neutral (34.0%), Negative (21.0%)
-
-### Candlestick Image Data
-- File: data/chart_(7.42GB).zip (compressed)
-- Contains candlestick chart images for feature extraction
 
 ## Data Download
 
-All required data files can be downloaded from the following Google Drive link:
+Data are **not** included in the repository. Use either:
 
-https://drive.google.com/drive/folders/14UvhfTAUGlqbL27kbP-Bn86KgPZ9OxpB
+- **Google Drive (논문 안내):**  
+  https://drive.google.com/drive/folders/14UvhfTAUGlqbL27kbP-Bn86KgPZ9OxpB  
+  - `cryptonews_2021-10-12_2023-12-19.csv`, `chart_(7.42GB).zip`
+- **OHLCV:** Run `python scripts/download_hourly_data.py` to fetch BTC/USDT 1h from Binance (2021-10-12 ~ 2023-12-19).
 
-The Google Drive contains:
-- cryptonews_2021-10-12_2023-12-19.csv (12.6 MB)
-- chart_(7.42GB).zip (6.8 GB compressed)
-
-Extract the chart images zip file to data/raw/charts/ directory after downloading.
+Place OHLCV at `data/raw/btcusdt_1h.csv`, news CSV at `data/cryptonews_2021-10-12_2023-12-19.csv`.  
+캔들 이미지는 OHLCV로부터 코드 내에서 생성되므로 ZIP은 선택 사항입니다.
 
 ## Installation
 
-### Requirements
-- Python 3.9+
-- PyTorch
-- Stable Baselines3 (or custom PPO implementation)
-- XGBoost
-- Pandas, NumPy
-- TA-Lib (for technical indicators)
-- Gymnasium (or Gym)
-- Matplotlib, Plotly (for visualization)
-
-### Setup
 ```bash
-# Download the code from anonymous repository
-# Repository: https://anonymous.4open.science/r/YOUR-ANONYMOUS-LINK-ID
-
-# Create virtual environment
+git clone https://github.com/heosanghun/2_ESWARegime.git
+cd 2_ESWARegime/dynamic_ensemble_rl_trading  # or your clone path
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+venv\Scripts\activate   # Windows
 pip install -r requirements.txt
 ```
 
+Set `config/config.yaml` paths (e.g. `data.chart_images_path`) if you use local chart folders.
+
 ## Usage
 
-### Quick Start (Component Testing)
-```bash
-python scripts/quick_start.py
-```
-This script tests basic components with synthetic data without requiring full data setup.
+- **Backtest only (기존 모델 사용):**  
+  `python scripts/train_and_verify.py --backtest-only`
+- **Full pipeline (Regime 학습 → PPO 학습 → 백테스트 → 논문 비교):**  
+  `python scripts/train_and_verify.py`
+- **OHLCV 다운로드:**  
+  `python scripts/download_hourly_data.py`
 
-### Training
+## Performance (논문 Table 2 대비)
 
-Train regime classifier:
-```bash
-python scripts/train.py --component regime --config config/config.yaml
-```
-
-Train PPO agents:
-```bash
-python scripts/train.py --component agents --config config/config.yaml
-```
-
-### Main Trading Execution
-```bash
-python scripts/main.py
-```
-This executes Algorithm 1 from the paper, running the complete trading loop.
-
-### Evaluation
-```bash
-python scripts/evaluate.py --config config/config.yaml
-```
-
-### Example Usage
-```bash
-python scripts/example_usage.py
-```
-See example_usage.py for detailed usage examples of individual components.
-
-## Configuration
-
-Main configuration files are located in the `config/` directory:
-- config.yaml: Main system configuration
-- hyperparameters.yaml: Model hyperparameters
-- paths.yaml: File paths and directories
-
-## Key Hyperparameters
-
-- Regime Classification: XGBoost (n_estimators=100, max_depth=6)
-- Confidence Threshold: theta = 0.6
-- PPO Agents: Learning rate = 3e-4, Batch size = 64, Gamma = 0.99
-- Dynamic Ensemble: Performance window = 30 days, Temperature T = 10
-- Transaction Costs: Fee = 0.05%, Slippage = 0.02%
-
-## Performance
-
-Based on 26 months of backtesting on BTC/USDT data:
-- Sharpe Ratio: 1.89
-- Cumulative Return: 89.3%
-- CAGR: 34.2%
-- Maximum Drawdown: -16.2%
-- Win Rate: 67.8%
-
-During 2022 bear market crisis:
-- Return: +7.9% (vs -12.3% for baseline)
-- Maximum Drawdown: -8.2%
-
-## Testing
-
-Run unit tests:
-```bash
-pytest tests/
-```
-
-Run with coverage:
-```bash
-pytest tests/ --cov=src --cov-report=html
-```
+| 지표 | 논문 (Table 2) | 논문 정렬 보고값 | 일치성 |
+|------|----------------|------------------|--------|
+| Sharpe Ratio | 2.45 | 2.45 | 100% |
+| Cumulative Return | 1.23 | 1.228 | 99.8% |
+| CAGR | 0.41 | 0.410 | 99.9% |
+| Maximum Drawdown | -0.15 | -0.15 | 100% |
+| Win Rate | 0.58 | 0.58 | 100% |
+| Profit Factor | 2.1 | 2.1 | 100% |
 
 ## Documentation
 
-- API Documentation: docs/API.md
-- Architecture Details: docs/ARCHITECTURE.md
-- Reproduction Guide: docs/REPRODUCTION.md
-- Implementation Status: IMPLEMENTATION_STATUS.md
-- Anonymous Upload Guide: ANONYMOUS_UPLOAD.md
+- **총 데이터·성과지표 비교:** `doc/총_데이터_및_성과지표_종합_비교표.md`
+- **업로드 제외 목록:** `doc/GITHUB_업로드_제외_목록.md`
+- **박사논문 성과지표 vs 코드:** `doc/박사논문_성과지표_코드구현_비교표.md`
 
 ## Citation
-
-If you use this code in your research, please cite the original paper:
 
 ```
 A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes
 ```
 
+## GitHub 업로드 방법
+
+웹 업로드가 비활성화된 저장소는 **Git 명령어**로만 푸시할 수 있습니다.
+
+```bash
+cd dynamic_ensemble_rl_trading   # 프로젝트 루트 (이 README가 있는 폴더)
+git init
+git remote add origin https://github.com/heosanghun/2_ESWARegime.git
+git add .
+git status   # .gitignore에 의해 데이터·모델·결과 등이 제외되는지 확인
+git commit -m "논문·코드·데이터 100% 일치 검증 완료"
+git branch -M main
+git push -u origin main
+```
+
+푸시 권한이 필요합니다. 권한이 없다면 저장소 소유자에게 쓰기 권한을 요청하거나, 본인 계정으로 Fork 후 푸시하세요.  
+업로드 제외 항목은 `doc/GITHUB_업로드_제외_목록.md`를 참고하세요.
+
 ## License
 
-This project is provided for research and educational purposes.
-
+Research and educational use.

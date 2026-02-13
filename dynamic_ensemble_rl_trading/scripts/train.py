@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 import yaml
 import logging
+import torch.nn as nn
 from src.data.data_processor import MarketDataHandler
 from src.data.feature_extractor import TechnicalFeatureExtractor
 from src.data.candlestick_generator import CandlestickGenerator
@@ -25,8 +26,32 @@ logger = setup_logger(__name__, level="INFO")
 
 def load_config(config_path: str):
     """Load configuration."""
+    config_dir = Path(config_path).parent
+    
+    # Load main config
     with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+    
+    # Load hyperparameters if exists
+    hyperparams_path = config_dir / 'hyperparameters.yaml'
+    if hyperparams_path.exists():
+        with open(hyperparams_path, 'r') as f:
+            hyperparams = yaml.safe_load(f)
+        config['hyperparameters'] = hyperparams
+    else:
+        # Default hyperparameters
+        config['hyperparameters'] = {
+            'regime_classifier': {
+                'n_estimators': 100,
+                'max_depth': 6,
+                'learning_rate': 0.1
+            },
+            'training': {
+                'total_timesteps': 1000000
+            }
+        }
+    
+    return config
 
 
 def train_regime_classifier(config):
@@ -141,12 +166,46 @@ def train_ppo_agents(config):
         slippage=config['training']['slippage']
     )
     
+    # Prepare agent kwargs with proper activation function
+    ppo_config = config['hyperparameters'].get('ppo', {})
+    policy_kwargs = ppo_config.get('policy_kwargs', {})
+    
+    # Convert activation function string to actual function
+    if isinstance(policy_kwargs.get('activation_fn'), str):
+        activation_name = policy_kwargs['activation_fn'].lower()
+        if activation_name == 'tanh':
+            policy_kwargs['activation_fn'] = nn.Tanh
+        elif activation_name == 'relu':
+            policy_kwargs['activation_fn'] = nn.ReLU
+        elif activation_name == 'elu':
+            policy_kwargs['activation_fn'] = nn.ELU
+        elif activation_name == 'gelu':
+            policy_kwargs['activation_fn'] = nn.GELU
+        else:
+            logger.warning(f"Unknown activation function: {activation_name}, using Tanh")
+            policy_kwargs['activation_fn'] = nn.Tanh
+    
+    agent_kwargs = {
+        'learning_rate': ppo_config.get('learning_rate', 0.0003),
+        'batch_size': ppo_config.get('batch_size', 64),
+        'n_steps': ppo_config.get('n_steps', 2048),
+        'n_epochs': ppo_config.get('n_epochs', 10),
+        'gamma': ppo_config.get('gamma', 0.99),
+        'gae_lambda': ppo_config.get('gae_lambda', 0.95),
+        'clip_range': ppo_config.get('clip_range', 0.2),
+        'ent_coef': ppo_config.get('ent_coef', 0.01),
+        'vf_coef': ppo_config.get('vf_coef', 0.5),
+        'max_grad_norm': ppo_config.get('max_grad_norm', 0.5),
+        'policy_kwargs': policy_kwargs
+    }
+    
     # Initialize agent manager
     agent_manager = HierarchicalAgentManager(
         bull_env=bull_env,
         bear_env=bear_env,
         sideways_env=sideways_env,
-        num_agents_per_pool=config['ensemble']['num_agents_per_pool']
+        num_agents_per_pool=config['ensemble']['num_agents_per_pool'],
+        agent_kwargs=agent_kwargs
     )
     
     # Train all pools

@@ -139,6 +139,9 @@ class PPOAgentPool:
         if return_probs:
             result['probabilities'] = probabilities
         
+        # Also return individual actions for tracking
+        result['individual_actions'] = actions
+        
         return result
     
     def get_agent(self, index: int) -> PPOAgent:

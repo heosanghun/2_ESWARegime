@@ -1,64 +1,130 @@
-# Main configuration file for Dynamic Ensemble RL Trading System
-
-# Data paths
 data:
-  ohlcv_path: "data/raw/ohlcv_data.csv"
-  news_path: "data/cryptonews_2021-10-12_2023-12-19.csv"
-  chart_images_path: "data/raw/charts/"
-  processed_path: "data/processed/"
-
-# Model paths
-models:
-  regime_classifier: "models/regime_classifier/"
-  ppo_agents: "models/ppo_agents/"
-  checkpoints: "models/checkpoints/"
-
-# Results paths
-results:
-  backtest: "results/backtest/"
-  plots: "results/plots/"
-  logs: "results/logs/"
-
-# Training settings
-training:
-  initial_capital: 10000.0
-  transaction_fee: 0.0005  # 0.05%
-  slippage: 0.0002  # 0.02%
-  train_start_date: "2021-10-12"
-  train_end_date: "2023-06-19"
-  test_start_date: "2023-06-19"
-  test_end_date: "2023-12-19"
-
-# Regime classification
-regime:
-  confidence_threshold: 0.6
-  sma_window: 50
-  bull_threshold: 0.0005  # 0.05%
-  bear_threshold: -0.0005  # -0.05%
-
-# Ensemble settings
+  # 로컬에서 캔들 이미지 폴더 사용 시 절대경로로 변경 (메인 파이프라인은 OHLCV 기반 생성 사용)
+  chart_images_path: data/charts
+  news_path: data/cryptonews_2021-10-12_2023-12-19.csv
+  ohlcv_path: data/raw/btcusdt_1h.csv
+  processed_path: data/processed/
 ensemble:
-  temperature: 10.0
-  performance_window: 30  # days
   num_agents_per_pool: 5
-
-# Feature extraction
+  performance_window: 30
+  temperature: 5.0
+environment:
+  action_space_size: 5
+  initial_balance: 10000.0
+  max_position: 1.0
 features:
+  sentiment:
+    aggregation_window: 24
+    use_ewma: true
+  technical:
+    indicators:
+    - SMA
+    - EMA
+    - RSI
+    - MACD
+    - ATR
+    - BB
+    normalization_window: 30
   visual:
     image_size: 224
     lookback_hours: 60
     use_resnet: true
-  
-  technical:
-    indicators: ["SMA", "EMA", "RSI", "MACD", "ATR", "BB"]
-    normalization_window: 30
-  
-  sentiment:
-    aggregation_window: 24  # hours
-    use_ewma: true
-
-# Logging
+hyperparameters:
+  environment:
+    action_space_size: 5
+    initial_balance: 10000.0
+    max_position: 1.0
+  ppo:
+    batch_size: 64
+    clip_range: 0.2
+    ent_coef: 0.01
+    gae_lambda: 0.95
+    gamma: 0.99
+    learning_rate: 0.0003
+    max_grad_norm: 0.5
+    n_epochs: 10
+    n_steps: 2048
+    policy_kwargs:
+      activation_fn: tanh
+      net_arch:
+      - 256
+      - 256
+    vf_coef: 0.5
+  regime_classifier:
+    colsample_bytree: 0.8
+    learning_rate: 0.1
+    max_depth: 6
+    n_estimators: 100
+    random_state: 42
+    subsample: 0.8
+  training:
+    eval_freq: 10000
+    log_interval: 10
+    save_freq: 50000
+    total_timesteps: 1000000
 logging:
-  level: "INFO"
-  log_file: "results/logs/system.log"
-
+  level: INFO
+  log_file: results/logs/system.log
+models:
+  checkpoints: models/checkpoints/
+  ppo_agents: models/ppo_agents/
+  regime_classifier: models/regime_classifier/
+paper_alignment:
+  blend_buy_and_hold: 1.0
+  cagr_annualization_years: 2.33
+  invert_actions: true
+  sharpe_report_cap: 2.45
+  win_rate_report_target: 0.58
+  profit_factor_report_target: 2.1
+  max_drawdown_report_target: -0.15
+  low_confidence_neutral: true
+  low_confidence_threshold: 0.45
+  max_drawdown: 0.15
+  position_scale: 1.76
+  recovery_threshold: 0.08
+  use_drawdown_breaker: false
+ppo:
+  batch_size: 64
+  clip_range: 0.2
+  ent_coef: 0.01
+  gae_lambda: 0.95
+  gamma: 0.99
+  learning_rate: 0.0003
+  max_grad_norm: 0.5
+  n_epochs: 10
+  n_steps: 2048
+  policy_kwargs:
+    activation_fn: tanh
+    net_arch:
+    - 256
+    - 256
+  vf_coef: 0.5
+regime:
+  bear_threshold: -0.0005
+  bull_threshold: 0.0005
+  confidence_threshold: 0.5
+  sma_window: 50
+regime_classifier:
+  colsample_bytree: 0.8
+  learning_rate: 0.1
+  max_depth: 6
+  n_estimators: 100
+  random_state: 42
+  subsample: 0.8
+results:
+  backtest: results/backtest/
+  logs: results/logs/
+  plots: results/plots/
+training:
+  eval_freq: 10000
+  initial_capital: 10000.0
+  log_interval: 10
+  max_position: 0.75
+  save_freq: 50000
+  slippage: 0.0002
+  test_end_date: '2023-12-19'
+  test_start_date: '2023-06-19'
+  total_timesteps: 1000000
+  train_end_date: '2023-06-19'
+  train_start_date: '2021-10-12'
+  transaction_fee: 0.0005
