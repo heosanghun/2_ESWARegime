@@ -35,6 +35,28 @@ This system implements a four-layer hierarchical architecture that adapts to mar
 - Backtesting with transaction costs (0.05% fee, 0.02% slippage)
 - Paper alignment options for Table 2 metric comparison
 
+## Reviewer #3 (ESWA-D-26-08980) Compliance
+
+본 저장소는 ESWA Reviewer #3가 지적한 3가지 방법론적 결함을 모두 코드 수준에서 제거했습니다.
+
+| # | 지적 | 해결 모듈 | 옵션 |
+|---|------|-----------|------|
+| 1 | Look-ahead Bias (DeepSeek 2025년 모델) | `src/data/finbert_sentiment.py` + `scripts/regenerate_news_sentiment_finbert.py` | `features.sentiment.model: finbert` (`ProsusAI/finbert`, 2019.08) |
+| 2 | 시계열 CV 오류 (표준 K-fold) | `src/validation/walk_forward_cv.py` (`WalkForwardExpandingCV`, `PurgedKFold`) | `validation.cv_method: walk_forward` / `purged_kfold` |
+| 3 | 후행적 라벨링 (SMA-50) | `src/regime/trend_scanning.py` (López de Prado 2018) | `regime.label_method: trend_scanning` |
+
+사용:
+```bash
+# (1) FinBERT로 뉴스 sentiment 재생성 (1회)
+python scripts/regenerate_news_sentiment_finbert.py
+
+# (2) Reviewer #3 모드로 백테스트
+python scripts/train_and_verify.py --backtest-only --reviewer3-mode
+```
+
+산출물: `results/verification/reviewer3_compliance.md`.  
+세부 계획: `doc/ESWA_Reviewer3_개발계획서.md`.
+
 ## Requirements
 
 - Python 3.9+

@@ -16,6 +16,12 @@ features:
   sentiment:
     aggregation_window: 24
     use_ewma: true
+    # Reviewer #3 (Look-ahead Bias): 'finbert' uses ProsusAI/finbert (2019)
+    # which predates the backtest window. 'csv' keeps the legacy column.
+    model: finbert
+    model_name: ProsusAI/finbert
+    device: cpu
+    rescored_csv: data/cryptonews_finbert_2021-10-12_2023-12-19.csv
   technical:
     indicators:
     - SMA
@@ -104,6 +110,13 @@ regime:
   bull_threshold: 0.0005
   confidence_threshold: 0.5
   sma_window: 50
+  # Reviewer #3 (lagging label): 'trend_scanning' generates forward-looking
+  # labels via López de Prado (2018). 'sma' keeps legacy behavior.
+  label_method: trend_scanning
+  trend_scanning:
+    horizon_min: 5
+    horizon_max: 20
+    t_threshold: 1.5
 regime_classifier:
   colsample_bytree: 0.8
   learning_rate: 0.1
@@ -115,6 +128,14 @@ results:
   backtest: results/backtest/
   logs: results/logs/
   plots: results/plots/
+validation:
+  # Reviewer #3 (time-series CV): use Walk-Forward Expanding Window or
+  # Purged K-Fold instead of standard K-Fold.
+  cv_method: walk_forward
+  n_splits: 5
+  test_size: 0.1
+  gap: 0
+  embargo_hours: 24
 training:
   eval_freq: 10000
   initial_capital: 10000.0

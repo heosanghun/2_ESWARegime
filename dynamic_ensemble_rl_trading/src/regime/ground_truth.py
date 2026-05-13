@@ -1,8 +1,15 @@
 """
 Ground truth generation for market regime classification.
 
-This module generates labels for market regimes (Bull, Bear, Sideways)
-based on the normalized slope of SMA-50 as specified in the paper.
+This module generates labels for market regimes (Bull, Bear, Sideways).
+
+Two methods are supported:
+- 'sma'             : legacy SMA-50 normalized slope (lagging indicator).
+- 'trend_scanning'  : forward-looking Trend Scanning (López de Prado, 2018)
+                      — used to address Reviewer #3's "lagging label" concern.
+
+The active method is controlled by the `method` constructor argument
+(default 'sma' for backwards compatibility).
 """
 
 import pandas as pd
@@ -16,20 +23,32 @@ logger = logging.getLogger(__name__)
 class RegimeGroundTruth:
     """
     Generates ground truth labels for market regime classification.
-    
-    Uses the normalized slope of SMA-50 to classify market regimes:
-    - Bull: m_t > delta_bull (0.05%)
-    - Bear: m_t < delta_bear (-0.05%)
-    - Sideways: otherwise
-    
+
+    Parameters
+    ----------
+    sma_window : int
+        Window size for SMA (used when method='sma').
+    bull_threshold / bear_threshold : float
+        Slope thresholds for the SMA method.
+    method : {'sma', 'trend_scanning'}
+        Label generation method.
+    trend_horizon_min, trend_horizon_max : int
+        Horizon range scanned when method='trend_scanning'.
+    trend_t_threshold : float
+        |t-value| threshold for Bull/Bear labels.
+
     Labels: 0 (Bear), 1 (Sideways), 2 (Bull)
     """
-    
+
     def __init__(
         self,
         sma_window: int = 50,
         bull_threshold: float = 0.0005,  # 0.05%
-        bear_threshold: float = -0.0005   # -0.05%
+        bear_threshold: float = -0.0005,   # -0.05%
+        method: str = "sma",
+        trend_horizon_min: int = 5,
+        trend_horizon_max: int = 20,
+        trend_t_threshold: float = 1.5,
     ):
         """
         Initialize the RegimeGroundTruth generator.
@@ -46,6 +65,15 @@ class RegimeGroundTruth:
         self.sma_window = sma_window
         self.bull_threshold = bull_threshold
         self.bear_threshold = bear_threshold
+        self.method = str(method).lower()
+        self.trend_horizon_min = int(trend_horizon_min)
+        self.trend_horizon_max = int(trend_horizon_max)
+        self.trend_t_threshold = float(trend_t_threshold)
+        if self.method not in ("sma", "trend_scanning"):
+            raise ValueError(
+                f"Unknown regime labeling method: {self.method}. "
+                "Choose 'sma' or 'trend_scanning'."
+            )
     
     def calculate_sma_slope(
         self,
@@ -101,8 +129,26 @@ class RegimeGroundTruth:
         pd.Series
             Regime labels: 0 (Bear), 1 (Sideways), 2 (Bull).
         """
-        logger.info("Generating regime labels from price data")
-        
+        logger.info(
+            "Generating regime labels (method=%s)", self.method
+        )
+
+        if self.method == "trend_scanning":
+            from .trend_scanning import TrendScanningLabeler
+
+            labeler = TrendScanningLabeler(
+                horizon_min=self.trend_horizon_min,
+                horizon_max=self.trend_horizon_max,
+                t_threshold=self.trend_t_threshold,
+            )
+            labels = labeler.generate_labels(price_data)
+            label_counts = labels.value_counts().sort_index()
+            logger.info(
+                "TrendScanning label distribution: %s",
+                dict(label_counts),
+            )
+            return labels
+
         # Calculate normalized slope
         slope = self.calculate_sma_slope(price_data)
         

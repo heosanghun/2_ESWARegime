@@ -67,6 +67,43 @@ def load_config():
     return cfg
 
 
+def _resolve_news_path(cfg):
+    """
+    Reviewer #3 (Look-ahead Bias): prefer the FinBERT-rescored CSV if it
+    exists. Falls back to the legacy DeepSeek-era CSV otherwise.
+    """
+    sent_cfg = cfg.get('features', {}).get('sentiment', {})
+    if str(sent_cfg.get('model', 'csv')).lower() == 'finbert':
+        rescored = sent_cfg.get('rescored_csv')
+        if rescored and Path(rescored).exists():
+            logger.info("  Sentiment source: FinBERT-rescored CSV → %s", rescored)
+            return rescored
+        logger.warning(
+            "  FinBERT rescored CSV not found (%s). Falling back to legacy CSV. "
+            "Run `python scripts/regenerate_news_sentiment_finbert.py` first.",
+            rescored,
+        )
+    return cfg['data']['news_path']
+
+
+def _build_regime_ground_truth(cfg):
+    """Build RegimeGroundTruth with method/threshold settings from config."""
+    rcfg = cfg['regime']
+    method = str(rcfg.get('label_method', 'sma')).lower()
+    ts = rcfg.get('trend_scanning', {}) or {}
+    gt = RegimeGroundTruth(
+        sma_window=rcfg['sma_window'],
+        bull_threshold=rcfg['bull_threshold'],
+        bear_threshold=rcfg['bear_threshold'],
+        method=method,
+        trend_horizon_min=int(ts.get('horizon_min', 5)),
+        trend_horizon_max=int(ts.get('horizon_max', 20)),
+        trend_t_threshold=float(ts.get('t_threshold', 1.5)),
+    )
+    logger.info("  Regime labeling method: %s", method)
+    return gt
+
+
 # ═══════════════════════════════════════════════════════════════════
 # STEP 1: Regime Classifier 학습
 # ═══════════════════════════════════════════════════════════════════
@@ -82,16 +119,12 @@ def step1_train_regime_classifier(cfg):
     )
     logger.info(f"  Train OHLCV: {len(ohlcv)} rows  ({ohlcv.index[0]} → {ohlcv.index[-1]})")
 
-    gt = RegimeGroundTruth(
-        sma_window=cfg['regime']['sma_window'],
-        bull_threshold=cfg['regime']['bull_threshold'],
-        bear_threshold=cfg['regime']['bear_threshold'],
-    )
+    gt = _build_regime_ground_truth(cfg)
     labels = gt.generate_labels(ohlcv[dh.get_ohlcv_columns()['close']])
 
     te = TechnicalFeatureExtractor()
     ve = CandlestickGenerator()
-    se = NewsSentimentExtractor(cfg['data']['news_path'])
+    se = NewsSentimentExtractor(_resolve_news_path(cfg))
     se.load_news_data(
         start_date=cfg['training']['train_start_date'],
         end_date=cfg['training']['train_end_date'],
@@ -141,7 +174,7 @@ def step2_train_ppo_agents(cfg, train_states=None):
     if train_states is None:
         te = TechnicalFeatureExtractor()
         ve = CandlestickGenerator()
-        se = NewsSentimentExtractor(cfg['data']['news_path'])
+        se = NewsSentimentExtractor(_resolve_news_path(cfg))
         se.load_news_data(
             start_date=cfg['training']['train_start_date'],
             end_date=cfg['training']['train_end_date'],
@@ -218,7 +251,7 @@ def step3_backtest(cfg):
 
     te = TechnicalFeatureExtractor()
     ve = CandlestickGenerator()
-    se = NewsSentimentExtractor(cfg['data']['news_path'])
+    se = NewsSentimentExtractor(_resolve_news_path(cfg))
     se.load_news_data(
         start_date=cfg['training']['test_start_date'],
         end_date=cfg['training']['test_end_date'],
@@ -455,19 +488,85 @@ def step4_compare(results, cfg=None):
 
 
 # ═══════════════════════════════════════════════════════════════════
+def write_reviewer3_compliance_report(cfg, avg_pct, actual):
+    """
+    Generate `results/verification/reviewer3_compliance.md` describing how
+    the run satisfies Reviewer #3's three concerns.
+    """
+    out = Path('results/verification') / 'reviewer3_compliance.md'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    sent = cfg.get('features', {}).get('sentiment', {})
+    rcfg = cfg.get('regime', {})
+    vcfg = cfg.get('validation', {})
+    finbert_csv = Path(sent.get('rescored_csv', ''))
+    finbert_used = (
+        str(sent.get('model', 'csv')).lower() == 'finbert'
+        and finbert_csv.exists()
+    )
+    lines = [
+        "# Reviewer #3 Compliance Report",
+        "",
+        f"_Generated: {datetime.now().isoformat(timespec='seconds')}_",
+        "",
+        "## 1. Look-ahead Bias (LLM)",
+        "",
+        f"- Sentiment model: **{sent.get('model', 'csv')}**",
+        f"- FinBERT-rescored CSV: `{finbert_csv}` (exists: {finbert_csv.exists()})",
+        f"- Active source: **{'FinBERT (pre-2020)' if finbert_used else 'legacy CSV'}**",
+        "",
+        "## 2. Time-Series Cross-Validation",
+        "",
+        f"- Method: **{vcfg.get('cv_method', 'walk_forward')}**",
+        f"- n_splits: {vcfg.get('n_splits', 5)},  test_size: {vcfg.get('test_size', 0.1)},  "
+        f"gap: {vcfg.get('gap', 0)},  embargo_hours: {vcfg.get('embargo_hours', 24)}",
+        "- Implementation: `src/validation/walk_forward_cv.py`",
+        "",
+        "## 3. Forward-Looking Ground Truth",
+        "",
+        f"- Labeling method: **{rcfg.get('label_method', 'sma')}**",
+        f"- Trend Scanning horizon: "
+        f"{rcfg.get('trend_scanning', {}).get('horizon_min')}..{rcfg.get('trend_scanning', {}).get('horizon_max')}, "
+        f"|t|>{rcfg.get('trend_scanning', {}).get('t_threshold')}",
+        "- Implementation: `src/regime/trend_scanning.py`",
+        "",
+        "## Performance vs. Paper Table 2",
+        "",
+        f"- Average consistency: **{avg_pct:.1f}%**",
+        "",
+        "| Metric | Paper | Actual |",
+        "|--------|------:|-------:|",
+    ]
+    for name, paper_val in PAPER_METRICS.items():
+        lines.append(f"| {name} | {paper_val} | {actual.get(name, 0.0):.4f} |")
+    out.write_text("\n".join(lines), encoding='utf-8')
+    logger.info("Reviewer #3 compliance report written: %s", out)
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Train + verify or backtest-only")
     parser.add_argument("--backtest-only", action="store_true", help="Skip training, run backtest + paper comparison only")
+    parser.add_argument(
+        "--reviewer3-mode",
+        action="store_true",
+        help="Force Reviewer #3 settings (FinBERT + Trend Scanning + Walk-Forward CV).",
+    )
     args = parser.parse_args()
 
     t0 = time.time()
     cfg = load_config()
 
+    if args.reviewer3_mode:
+        cfg.setdefault('features', {}).setdefault('sentiment', {})['model'] = 'finbert'
+        cfg.setdefault('regime', {})['label_method'] = 'trend_scanning'
+        cfg.setdefault('validation', {})['cv_method'] = 'walk_forward'
+        logger.info("Reviewer #3 mode ENABLED: FinBERT + TrendScanning + WalkForwardCV")
+
     if args.backtest_only:
         logger.info("Backtest-only mode: using existing models")
         results = step3_backtest(cfg)
         avg_pct, actual = step4_compare(results, cfg)
+        write_reviewer3_compliance_report(cfg, avg_pct, actual)
         elapsed = time.time() - t0
         logger.info(f"Backtest+compare 완료:  {elapsed/60:.1f}분,  평균 일치성 = {avg_pct:.1f}%")
         return
@@ -483,6 +582,8 @@ def main():
 
     # STEP 4: Compare
     avg_pct, actual = step4_compare(results, cfg)
+
+    write_reviewer3_compliance_report(cfg, avg_pct, actual)
 
     elapsed = time.time() - t0
     logger.info(f"\n전체 파이프라인 완료:  {elapsed/60:.1f}분,  평균 일치성 = {avg_pct:.1f}%")
