@@ -143,6 +143,17 @@ training:
   max_position: 0.75
   save_freq: 50000
   slippage: 0.0002
+  # Reviewer #3 (#7): switch to 'atr' for ATR-scaled slippage or
+  # 'conservative' for a fixed 0.10% upper-bound check.
+  slippage_model: atr            # fixed | atr | conservative
+  atr_slippage:
+    window: 14
+    base: 0.0002
+    k: 0.5
+    min_slip: 0.0002
+    max_slip: 0.005
+  conservative_slippage:
+    rate: 0.001
   test_end_date: '2023-12-19'
   test_start_date: '2023-06-19'
   total_timesteps: 1000000

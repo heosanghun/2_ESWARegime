@@ -35,27 +35,55 @@ This system implements a four-layer hierarchical architecture that adapts to mar
 - Backtesting with transaction costs (0.05% fee, 0.02% slippage)
 - Paper alignment options for Table 2 metric comparison
 
-## Reviewer #3 (ESWA-D-26-08980) Compliance
+## ESWA-D-26-08980 — 18개 리뷰어 항목 전수 대응
 
-본 저장소는 ESWA Reviewer #3가 지적한 3가지 방법론적 결함을 모두 코드 수준에서 제거했습니다.
+본 저장소는 ESWA Major Revision의 18개 리뷰어 지적을 **모두** 코드 또는 문서 산출물로 대응했습니다. 자세한 매핑은 `doc/ESWA_18항목_최종정리표.md` 와 `doc/Rebuttal_Letter_draft.md` 를 참고하세요.
 
-| # | 지적 | 해결 모듈 | 옵션 |
-|---|------|-----------|------|
-| 1 | Look-ahead Bias (DeepSeek 2025년 모델) | `src/data/finbert_sentiment.py` + `scripts/regenerate_news_sentiment_finbert.py` | `features.sentiment.model: finbert` (`ProsusAI/finbert`, 2019.08) |
-| 2 | 시계열 CV 오류 (표준 K-fold) | `src/validation/walk_forward_cv.py` (`WalkForwardExpandingCV`, `PurgedKFold`) | `validation.cv_method: walk_forward` / `purged_kfold` |
-| 3 | 후행적 라벨링 (SMA-50) | `src/regime/trend_scanning.py` (López de Prado 2018) | `regime.label_method: trend_scanning` |
+### 핵심 신규 모듈
 
-사용:
+| # | 항목 | 위치 |
+|---|------|------|
+| 1 | FinBERT 감성분석 (Look-ahead bias 제거) | `src/data/finbert_sentiment.py` |
+| 2 | Walk-Forward / Purged K-Fold CV | `src/validation/walk_forward_cv.py` |
+| 3 | Trend Scanning 라벨링 | `src/regime/trend_scanning.py` |
+| 7 | ATR-동적 슬리피지 | `src/backtest/slippage.py` |
+| 9 | 통계 검증 (Bootstrap + Ledoit-Wolf + Bonferroni) | `src/evaluation/statistical_tests.py` |
+| 12 | 연산 복잡도 / Latency 측정 | `scripts/measure_computational_complexity.py` |
+| 13 | News-제외 Ablation | `src/ablation/no_news.py` |
+
+### 실행
+
 ```bash
 # (1) FinBERT로 뉴스 sentiment 재생성 (1회)
 python scripts/regenerate_news_sentiment_finbert.py
 
-# (2) Reviewer #3 모드로 백테스트
+# (2) Reviewer #3 모드 백테스트 (FinBERT + Trend Scanning + Walk-Forward + ATR Slippage)
 python scripts/train_and_verify.py --backtest-only --reviewer3-mode
+
+# (3) 통계 검증 리포트
+python scripts/run_statistical_tests.py
+
+# (4) Latency / 메모리 측정
+python scripts/measure_computational_complexity.py
+
+# (5) News-제외 Ablation
+python scripts/run_ablation_no_news.py
 ```
 
-산출물: `results/verification/reviewer3_compliance.md`.  
-세부 계획: `doc/ESWA_Reviewer3_개발계획서.md`.
+### 핵심 산출물
+
+| 파일 | 내용 |
+|------|------|
+| `results/verification/reviewer3_compliance.md` | Reviewer #3 3개 항목 코드/설정 일치 증명 |
+| `results/verification/statistical_tests.md` | Bootstrap CI + Ledoit-Wolf + Bonferroni |
+| `results/verification/computational_complexity.md` | CPU latency / RSS memory / 모델 크기 |
+| `results/verification/ablation_no_news.md` | 뉴스 제외 시 metrics Δ |
+| `results/verification/metrics_vs_paper.json` | 논문 Table 2 vs 실제 |
+| `doc/Rebuttal_Letter_draft.md` | 18개 항목 전수 응답 + 인용 거절문 |
+| `doc/Reproducibility_Statement.md` | 데이터/시드/환경/명령 일체 |
+| `doc/manuscript_revisions/*.md` | 본문 보강 자료 13개 문서 (수식, Limitation, Practical Implications, Notation, Related Work, Figure brief) |
+| `doc/ESWA_18항목_최종정리표.md` | 18개 항목 ↔ 산출물 한눈 매핑 |
+| `doc/ESWA_Reviewer3_개발계획서.md` | 개발 계획서 |
 
 ## Requirements
 

@@ -403,8 +403,16 @@ def step3_backtest(cfg):
         if (t + 1) % 500 == 0:
             logger.info(f"  step {t+1}/{len(timestamps)-1}  pv={pv:.2f}  regime={regime_name}")
 
-    # ── Backtester ──
-    bt = Backtester(initial_capital=ic, transaction_fee=tf, slippage=sl)
+    # ── Backtester (Reviewer #3 #7: dynamic ATR slippage if configured) ──
+    from src.backtest.slippage import build_slippage_model
+    slip_model = build_slippage_model(cfg.get('training', {}))
+    dyn_slip = slip_model.precompute(ohlcv) if slip_model is not None else None
+    bt = Backtester(
+        initial_capital=ic,
+        transaction_fee=tf,
+        slippage=sl,
+        dynamic_slippage=dyn_slip,
+    )
     results = bt.run_backtest(trading_history, ohlcv)
     results['trading_history'] = trading_history
     return results

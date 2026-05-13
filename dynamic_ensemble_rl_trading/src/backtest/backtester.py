@@ -31,10 +31,15 @@ class Backtester:
         initial_capital: float = 10000.0,
         transaction_fee: float = 0.0005,
         slippage: float = 0.0002,
+        dynamic_slippage: Optional[pd.Series] = None,
     ):
         self.initial_capital = initial_capital
         self.transaction_fee = transaction_fee
         self.slippage = slippage
+        # Reviewer #3 (#7 Slippage): a time-indexed Series of per-bar
+        # slippage rates (e.g. produced by ATRSlippageModel). When set,
+        # it overrides the scalar `slippage` argument.
+        self.dynamic_slippage = dynamic_slippage
         self.metrics_calculator = PerformanceMetrics()
 
     # ------------------------------------------------------------------
@@ -86,7 +91,23 @@ class Backtester:
         #   r_asset[i]  = (price[i+1] - price[i]) / price[i]
         #   r_step[i]   = w[i] * r_asset[i] - tc * |w[i+1] - w[i]|  (slippage included in tc)
         asset_returns = np.diff(prices) / prices[:-1]          # length n-1
-        tc_rate = self.transaction_fee + self.slippage
+
+        if self.dynamic_slippage is not None:
+            slip_series = (
+                self.dynamic_slippage.reindex(valid_ts)
+                .ffill()
+                .bfill()
+                .fillna(self.slippage)
+                .values
+            )
+            tc_rate = self.transaction_fee + slip_series[:-1]
+            logger.info(
+                "Dynamic slippage active: mean=%.4f%%, max=%.4f%%",
+                100 * float(np.mean(slip_series)),
+                100 * float(np.max(slip_series)),
+            )
+        else:
+            tc_rate = self.transaction_fee + self.slippage
 
         # |w[i+1]-w[i]| for i=0..n-2 -> length n-1 (align with asset_returns)
         weight_changes = np.abs(np.diff(weights))
@@ -111,6 +132,9 @@ class Backtester:
 
         # ── trade log ──
         trades = []
+        tc_scalar = (
+            float(np.mean(tc_rate)) if isinstance(tc_rate, np.ndarray) else float(tc_rate)
+        )
         for i in range(1, n):
             if abs(weights[i] - weights[i - 1]) > 1e-6:
                 trades.append({
@@ -119,7 +143,7 @@ class Backtester:
                     'price': prices[i],
                     'weight_before': weights[i - 1],
                     'weight_after': weights[i],
-                    'transaction_cost': tc_rate * abs(weights[i] - weights[i - 1]) * pv[i - 1],
+                    'transaction_cost': tc_scalar * abs(weights[i] - weights[i - 1]) * pv[i - 1],
                 })
 
         logger.info("Backtest completed")
