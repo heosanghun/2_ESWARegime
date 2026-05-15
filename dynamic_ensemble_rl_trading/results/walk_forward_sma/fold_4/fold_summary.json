@@ -1,0 +1,17 @@
+{
+  "fold": 4,
+  "train_start": "2021-10-12",
+  "train_end": "2023-04-19",
+  "test_start": "2023-04-19",
+  "test_end": "2023-08-19",
+  "elapsed_min": 19.466209069887796,
+  "avg_consistency_pct": 4.916666666666667,
+  "metrics": {
+    "Sharpe Ratio": -16.70373189621049,
+    "Cumulative Return": -0.6972015848779749,
+    "CAGR": -0.9728473124104012,
+    "Maximum Drawdown": -0.6972015848779749,
+    "Win Rate": 0.09668602664844551,
+    "Profit Factor": 0.35680230548944036
+  }
+}
