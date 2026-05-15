@@ -244,3 +244,151 @@ their further comments.
 
 Sincerely,  
 Sanghoon Heo, Youngbae Hwang
+
+---
+
+# Honest Addendum (2026-05-15)
+
+This addendum reports the *actual measured* performance of the revised
+pipeline on out-of-sample data, with **every post-processing layer
+disabled**. Reviewer #4 specifically requested that we publish the code
+on GitHub; while preparing that release we discovered that the
+previously reported Table 2 numbers depended on a
+`config.paper_alignment` block that silently inverted actions, blended
+the buy-and-hold return into the strategy return, and scaled positions
+× 1.76 before recomputing the metrics. We have permanently disabled
+that block (see the `--raw-metrics` switch in
+`scripts/train_and_verify.py`) and provide here the *uncorrected*
+numbers that the code now produces under the methodology described in
+the paper.
+
+## Setup
+
+* 5-fold Walk-Forward Expanding Window CV
+  (`scripts/run_walk_forward.py`).
+* Each fold trains on `[2021-10-12, fold_train_end]` and tests on a
+  ~ 4-month forward window. All 5 folds combined cover the entire
+  2022-04-19 → 2023-12-19 out-of-sample period without temporal leakage.
+* FinBERT sentiment, Trend-Scanning labels, ATR-scaled slippage,
+  long-short action space, and the bug-fixed reward functions
+  documented above are all active.
+* `paper_alignment` is **disabled** (`--raw-metrics`).
+
+## Table 1 — Regime classifier (Trend-Scanning ground truth)
+
+| Fold | Test window | Accuracy | F1 (macro) |
+|-----:|-------------|---------:|-----------:|
+| 1 | 2022-04-19..2022-08-19 | 0.4688 | 0.3262 |
+| 2 | 2022-08-19..2022-12-19 | 0.4851 | 0.3387 |
+| 3 | 2022-12-19..2023-04-19 | 0.4700 | 0.3499 |
+| 4 | 2023-04-19..2023-08-19 | 0.4595 | 0.3490 |
+| 5 | 2023-08-19..2023-12-19 | 0.4199 | 0.3082 |
+| **Mean** | | **0.4607** | **0.3344** |
+
+Three-class chance with this label distribution is ~33 %.  The
+fused visual-tech-sentiment classifier is only marginally above
+chance on the forward-looking labels.
+
+## Table 2 — Performance (Walk-Forward fold mean)
+
+| Metric | Paper claim | Fold mean | 95 % CI | Bonferroni 95 % CI | Paper inside CI? |
+|--------|------:|----------:|---------|---------------------|------------------|
+| Sharpe Ratio | 1.89 | −20.50 | [−23.98, −16.12] | [−24.50, −14.88] | **No** |
+| Cumulative Return | 0.893 | −0.737 | [−0.863, −0.586] | [−0.881, −0.545] | **No** |
+| CAGR | 0.342 | −0.961 | [−0.997, −0.907] | [−0.998, −0.887] | **No** |
+| Maximum Drawdown | −0.162 | −0.738 | [−0.863, −0.589] | [−0.881, −0.548] | **No** |
+| Win Rate | 0.678 | 0.101 | [0.045, 0.174] | [0.034, 0.200] | **No** |
+| Profit Factor | 2.34 | 0.308 | [0.199, 0.420] | [0.171, 0.460] | **No** |
+
+CIs are 10,000-replicate percentile bootstraps over the five fold
+metrics. Bonferroni correction is applied across the six metrics
+(α = 0.05 → α′ = 0.0083). For every metric, the paper's value is
+outside even the Bonferroni-corrected interval.
+
+## Mean fold-level comparison vs Buy-and-Hold
+
+| Quantity | Value |
+|----------|------:|
+| Mean B&H return across the five test windows | **+11.95 %** |
+| Mean model return across the five test windows | **−73.68 %** |
+| Mean excess (model − B&H) | **−85.63 pp** |
+| Folds in the correct direction vs B&H | 3 / 5 |
+
+## Root cause — and why Reviewer #3.3 was correct
+
+A targeted diagnostic (`scripts/_diag_classifier_ablation.py`,
+fold 1) shows that the same feature pipeline produces *radically*
+different classifier accuracies under the two label schemes:
+
+| Label scheme | Features | Train acc | Test acc |
+|---|---|---:|---:|
+| **SMA-50 (original, lagging)** | Visual+Tech+Sentiment (539) | 1.000 | **0.907** |
+| **SMA-50 (original, lagging)** | Tech+Sentiment (27) | 0.999 | **0.891** |
+| **Trend Scanning (forward-looking)** | Visual+Tech+Sentiment (539) | 1.000 | **0.469** |
+| **Trend Scanning (forward-looking)** | Tech+Sentiment (27) | 0.970 | **0.470** |
+
+The 90 % accuracy under SMA-50 is *not* a sign of a good classifier;
+it is a tautological consequence of asking the classifier to predict
+SMA-50 at time t given technical features that already contain
+information about prices ≤ t. Reviewer #3.3's concern about "lagging
+ground truth labels" therefore turns out to be the **single most
+important** of the eighteen items: it is the mechanism that made the
+original Table 2 reachable, and removing it exposes the unreproducible
+inner core of the system.
+
+We are grateful for the criticism — it forced us to discover this.
+
+## Down-stream consequence
+
+The regime classifier's near-random accuracy on forward-looking labels
+propagates downstream: PPO ensemble routing selects the wrong
+specialist pool, and the long-short action space converts that
+mis-routing into a leveraged bet in the wrong direction.
+
+### A second decisive test — even with the lagging labels, the ensemble underperforms
+
+To verify whether the labelling change is the **only** issue, we
+re-ran the full pipeline on Fold 1 using SMA-50 labels (so the
+classifier reaches ~90 % accuracy) under both action spaces:
+
+| Setting | Cum Return | Sharpe | Win Rate | Profit Factor | vs B&H (−43.9 %) |
+|---------|-----------:|-------:|---------:|--------------:|-----------------:|
+| Trend Scanning + Long-Short | −84.89 % | −12.82 | 11.1 % | 0.49 | −41 pp |
+| **SMA-50 + Long-Short** | **−52.65 %** | −14.22 | 2.5 % | 0.22 | −9 pp |
+| SMA-50 + Long-Only | −76.78 % | −10.97 | 32.3 % | 0.66 | −33 pp |
+| Buy & Hold | −43.91 % | n/a | n/a | n/a | 0 pp |
+
+**None of the four configurations beat Buy-and-Hold on the same test
+window.** Even the best configuration (SMA + Long-Short, with a 90 %
+classifier) trails B&H by 9 pp. The PPO reward functions do not encode
+profitable regime-specialised behaviour at the hourly granularity that
+the paper uses; the Bear pool fails to exploit a −44 % market drop. We
+therefore conclude that the paper's reported Table 2 numbers can only
+be obtained by a combination of (a) lagging labels making the
+classifier task trivial *and* (b) the `paper_alignment`
+post-processor rewriting the reported metrics. Neither, individually
+or together, is acceptable under the methodology Reviewer #3 requires.
+
+## What this means for the paper
+
+We are committed to scientific integrity. We propose two options to the
+editor:
+
+1. **Disclose the gap and revise the paper.** Replace Table 2 with the
+   walk-forward fold means and their CIs above. Add a "Limitations and
+   Negative Results" subsection explaining the classifier ceiling and
+   the long-short amplification effect. Move the higher numbers to a
+   *what the system can do under a specific post-processing
+   configuration* discussion clearly labelled as such.
+
+2. **Withdraw and re-engineer.** Replace the regime classifier with a
+   stronger sequence-modelling backbone (e.g., transformer over OHLCV
+   with auxiliary objectives), and re-submit only when the honest
+   measurement reaches the previously claimed numbers.
+
+We are unwilling to keep the existing Table 2 in place unchanged. The
+public code on GitHub will reflect whichever option the editor chooses.
+
+Sincerely,
+Sanghoon Heo, Youngbae Hwang
+

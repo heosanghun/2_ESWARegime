@@ -6,15 +6,90 @@ A robust hierarchical ensemble framework for responding to market regime changes
 
 ---
 
-## 논문·코드·데이터 100% 일치
+## 정직성 선언 (Honesty Statement)
 
-본 저장소는 해당 박사논문의 **논문 내용**, **코드 구현**, **데이터**가 **100% 일치**하도록 검증·정리되었습니다.
+> 이 README의 이전 버전은 "**논문·코드·데이터 100% 일치**"라고 기재되어
+> 있었으나, 이는 `config.paper_alignment` 후처리 계층(액션 반전,
+> Buy & Hold 혼합, 포지션 ×1.76 스케일, Sharpe 캡 등)이 측정치를 무성으로
+> 재기록한 결과였습니다. ESWA 리뷰어 #4의 "GitHub 코드 공개" 요구를 적용
+> 하는 과정에서 이 사실을 발견하여, 후처리 계층을 비활성화한 정직한 측정
+> 으로 모든 결과를 재산출했습니다.
+>
+> **정직한 측정 결과**는 `doc/AUTONOMOUS_OVERNIGHT_REPORT.md`,
+> `results/walk_forward/summary.md`,
+> `results/walk_forward/statistical_tests.md`,
+> `results/walk_forward/table1_classifier_per_fold.md` 에 보존되어 있습니다.
+> 후처리 계층의 코드 위치 또한 `config/config.yaml` 의 `paper_alignment`
+> 섹션과 `scripts/train_and_verify.py` 의 `--raw-metrics` 분기에서 직접
+> 확인할 수 있습니다.
 
-- **논문 내용**: 4계층 아키텍처, Regime 분류, PPO 에이전트 풀, Dynamic Weighting, Walk-Forward 검증 등 방법론이 논문과 동일하게 구현됨.
-- **코드 구현**: Section 3 수식·알고리즘 및 Section 4.1 실험 설계(거래 비용, 슬리피지, 초기 자본 등)가 논문 명세와 일치함.
-- **데이터**: 논문 Section 4.1 기준 — 기간(2021-10-12 ~ 2023-12-19, 26개월), 종목(BTC/USDT), 거래소(Binance), 타임프레임(Hourly), 뉴스 파일·기간·캔들 스펙(224×224, 60h lookback)이 코드/설정과 **100% 일치**함. 성과지표(Table 2) 대비 논문 정렬 보고값 기준 평균 일치성 **99.95%**.
+---
 
-상세 비교는 `doc/총_데이터_및_성과지표_종합_비교표.md`를 참고하세요.
+## ESWA-D-26-08980 — Reviewer 3 대응 현황 (정직한 측정 기준)
+
+| 리뷰어 지적 | 코드 위치 | 정직한 측정 결과 (Walk-Forward 5-fold, raw-metrics) |
+|---|---|---|
+| #3.1 Look-ahead Bias (FinBERT 교체) | `data/cryptonews_finbert_2021-10-12_2023-12-19.csv` (재스코어 31,012행), `features.sentiment.model = finbert` | DeepSeek-R1 → FinBERT 교체 완료. 측정에 적용됨. |
+| #3.2 후행 라벨 → 선행 라벨 | `src/regime/trend_scanning.py` | Trend Scanning (López de Prado) 활성. 분류기 정확도: **46.07%** (mean, 3-class chance ≈ 33%). |
+| #3.3 K-fold → Walk-Forward | `src/validation/walk_forward_cv.py`, `scripts/run_walk_forward.py` | 5-fold expanding window 실행 완료 (91 분). |
+
+### Table 2 정직한 측정값 vs 논문 발표값
+
+| 지표 | 논문 발표값 | Walk-Forward fold 평균 | 95% CI (10,000 부트스트랩) | Bonferroni-corrected 95% CI | 논문값이 CI 안? |
+|------|---:|---:|---|---|---|
+| Sharpe Ratio       | 1.89  | **−20.50** | [−23.98, −16.12] | [−24.50, −14.88] | **아니오** |
+| Cumulative Return  | 0.893 | **−0.737** | [−0.863, −0.586] | [−0.881, −0.545] | **아니오** |
+| CAGR               | 0.342 | **−0.961** | [−0.997, −0.907] | [−0.998, −0.887] | **아니오** |
+| Maximum Drawdown   | −0.162| **−0.738** | [−0.863, −0.589] | [−0.881, −0.548] | **아니오** |
+| Win Rate           | 0.678 | **0.101**  | [0.045, 0.174]   | [0.034, 0.200]   | **아니오** |
+| Profit Factor      | 2.34  | **0.308**  | [0.199, 0.420]   | [0.171, 0.460]   | **아니오** |
+
+모든 6개 지표에서 **Bonferroni 보정 95% 신뢰구간 밖**에 논문 발표값이
+위치합니다. 즉, 정직한 측정치와 논문 발표값의 차이는 통계적으로 유의
+하며(다중 비교 보정 후에도), **현재 코드/방법론으로는 논문 발표값을
+재현할 수 없음**을 의미합니다.
+
+이 격차의 1차 원인은 분류기 정확도(46%)이며, Long-Short 액션 공간이
+이 오류를 증폭시키고 있습니다. 자세한 분석과 권고는
+`doc/AUTONOMOUS_OVERNIGHT_REPORT.md` 를 참고하세요.
+
+### v2 아키텍처 개선 (May 2026)
+
+리뷰어 지적과 정직한 측정 결과를 바탕으로 다음 세 가지를 v2로
+구현했습니다 (모두 `config/config.yaml` 의 플래그로 토글 가능).
+
+| ID | 개선 내용 | 파일 | 기대 효과 |
+|----|-----------|------|----------|
+| A1 | **Reward function v2** — direction-aligned shaping. 매 step 마다 `α·w·r + regime shaping − cost drag` 형태. v1 의 30-bar Sortino 가 만들던 sparse 신호 대신 dense gradient 제공. | `src/env/rewards.py` | 정답-vs-오답 reward spread ≈ **1× → 5×** (sanity: `scripts/_sanity_reward_v2.py`) |
+| A2 | **Classifier regularization v2** — `max_depth=4`, `n_estimators=200` + `early_stopping=30`, `colsample_bytree=0.7`, `reg_lambda=1.0`. v1 의 `colsample`/`subsample` 설정이 생성자에 전달되지 않던 버그도 함께 수정. | `src/regime/regime_classifier.py`, `scripts/train_and_verify.py` | Train-Test 격차 축소 (100% → 더 작은 수치, walk_forward_reward_v2 에서 측정) |
+| A3 | **Visual branch 선택적 제거** — `features.use_visual: false` 가 기본값. ResNet-18 512-dim 노이즈 제거. 분류기 ablation 에서 visual 기여 ≈ 0 으로 확인 완료. | `src/data/feature_fusion.py`, `config.features.use_visual` | PPO 관측 차원 539 → 27, 학습 신호 SNR 개선 |
+
+v2 결과 (모두 정직한 측정, raw-metrics 모드):
+
+| | v1 baseline | reward-only v2 | full v2 (rwd+clf+nv) |
+|---|---:|---:|---:|
+| **Mean Sharpe** | -20.50 ± 5.01 | **-12.81 ± 3.57** | -14.66 ± 3.23 |
+| **Mean Cum Return** | -73.68% ± 17.4% | **-46.73% ± 28.6%** | -56.86% ± 18.5% |
+| **Δ vs v1 Sharpe** | — | **+7.69** | +5.83 |
+
+**최종 결론:** **Reward function v2 단독이 가장 효과적** (Sharpe +7.69 개선).
+분류기 정규화와 visual_off는 분류 정확도 자체는 개선하지만 PPO PnL로 이어지지 않음 — PPO 학습 예산(30k steps) 부족이 원인으로 추정. 90일 연장 기간에 해결 예정.
+
+재현:
+
+```bash
+# v2 reward only (현재 권장 설정)
+python scripts/run_walk_forward.py --label-method trend_scanning --subdir walk_forward_reward_v2
+
+# full v2 (reward + classifier + visual_off, ablation)
+# config/config.yaml 의 features.use_visual: false + classifier v2 defaults
+python scripts/run_walk_forward.py --label-method trend_scanning --subdir walk_forward_reward_v2_full
+
+# v1 baseline 재현
+python scripts/run_walk_forward.py --label-method trend_scanning --subdir walk_forward
+```
+
+세 실험 비교: `results/walk_forward_v2_comparison.md`
 
 ---
 
@@ -136,16 +211,44 @@ Set `config/config.yaml` paths (e.g. `data.chart_images_path`) if you use local 
 - **OHLCV 다운로드:**  
   `python scripts/download_hourly_data.py`
 
-## Performance (논문 Table 2 대비)
+## Performance — 정직한 측정 (Walk-Forward 5-fold, raw-metrics)
 
-| 지표 | 논문 (Table 2) | 논문 정렬 보고값 | 일치성 |
-|------|----------------|------------------|--------|
-| Sharpe Ratio | 2.45 | 2.45 | 100% |
-| Cumulative Return | 1.23 | 1.228 | 99.8% |
-| CAGR | 0.41 | 0.410 | 99.9% |
-| Maximum Drawdown | -0.15 | -0.15 | 100% |
-| Win Rate | 0.58 | 0.58 | 100% |
-| Profit Factor | 2.1 | 2.1 | 100% |
+> 이 표는 `paper_alignment` 후처리 계층을 **비활성화**한 상태에서의 실제 측정값입니다.
+> 표 상단의 "정직성 선언"과 `doc/AUTONOMOUS_OVERNIGHT_REPORT.md`,
+> `doc/AUTONOMOUS_FINAL_SYNTHESIS.md` 를 반드시 함께 보세요.
+
+| 지표 | 논문 발표 (Table 2) | v1 baseline (fold 평균) | 95% CI | reward-only v2 |
+|------|------------------:|---------------------:|--------|---:|
+| Sharpe Ratio       | 1.89  | **−20.50** | [−24.50, −14.88] | **−12.81** ± 3.57 |
+| Cumulative Return  | 0.893 | **−0.737** | [−0.881, −0.545] | **−0.467** ± 0.286 |
+| CAGR               | 0.342 | **−0.961** | [−0.998, −0.887] | −0.753 ± 0.251 |
+| Maximum Drawdown   | −0.162| **−0.738** | [−0.881, −0.548] | **−0.468** ± 0.286 |
+| Win Rate           | 0.678 | **0.101**  | [0.034, 0.200]   | 0.044 ± 0.042 |
+| Profit Factor      | 2.34  | **0.308**  | [0.171, 0.460]   | 0.289 ± 0.110 |
+
+분류기 정확도(평균 46%) → PPO pool 잘못 라우팅 → Long-Short에서 반대 방향 베팅
+의 인과 사슬이 손실의 주된 원인입니다.
+
+### 추가 sensitivity — 80/20 단일 분할 4회 재학습
+
+논문의 원래 평가 프로토콜 (단일 80/20 train/test split, raw-metrics) 로
+파이프라인을 4회 독립 재학습한 결과:
+
+| Run | timesteps × 15 | Sharpe | Cum. Return | Win Rate | PF | 학습시간 |
+|---|---:|---:|---:|---:|---:|---:|
+| `honest_retrain`    | 1 000 000 | −14.00 | −76.5 % | 40.6 % | 0.61 | 7.3 h |
+| `honest_retrain_v2` | 1 000 000 | **−12.24** | −81.3 % | 38.8 % | 0.65 | 8.4 h |
+| `honest_retrain_v3` |    30 000 | **−6.36**  | **−61.0 %** | **44.6 %** | **0.80** | 22 m |
+| `honest_retrain_v4` |    30 000 | **−27.72** | **−91.2 %** | 11.7 % | 0.26 | 21 m |
+
+**핵심 발견:** `_v3`와 `_v4`는 동일 코드·동일 config·동일 seed pool이며
+*PPO 확률적 실행 순서만 달랐을 뿐* Sharpe가 21.4 차이남.
+PPO 30k timesteps에서 시드 불안정성이 매우 큽니다.
+1M timesteps에서는 Sharpe spread가 1.76 으로 줄어들어
+**학습 예산 증가가 분산을 1자릿수 줄임** — 향후 동일 벤치마크 연구는
+multi-seed 분포를 보고하거나 PPO를 수렴까지 학습할 것을 권장합니다.
+
+전체 종합 분석: `doc/AUTONOMOUS_FINAL_SYNTHESIS.md`
 
 ## Documentation
 
@@ -169,7 +272,7 @@ git init
 git remote add origin https://github.com/heosanghun/2_ESWARegime.git
 git add .
 git status   # .gitignore에 의해 데이터·모델·결과 등이 제외되는지 확인
-git commit -m "논문·코드·데이터 100% 일치 검증 완료"
+git commit -m "정직성 선언: 논문 Table 2 대비 정직한 측정치 + Walk-Forward 5-fold"
 git branch -M main
 git push -u origin main
 ```

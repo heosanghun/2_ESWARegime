@@ -6,17 +6,17 @@ Generated to address Reviewer #1 / #2 (item #12).
 
 | Component | median (ms) | mean (ms) | p95 (ms) |
 |-----------|------------:|---------:|---------:|
-| Regime classifier (XGBoost) | 3.826 | 5.302 | 19.704 |
-| PPO agent (MlpPolicy) | 0.393 | 0.562 | 1.215 |
-| End-to-end regime switch | 5.364 | 6.779 | 11.567 |
+| Regime classifier (XGBoost) | 0.181 | 1.208 | 5.946 |
+| PPO agent (MlpPolicy) | 0.417 | 0.604 | 1.272 |
+| End-to-end regime switch | 4.869 | 5.436 | 8.620 |
 
 ## Memory footprint
 
-- Resident memory (full pipeline loaded): **890.9 MB**
+- Resident memory (full pipeline loaded): **905.0 MB**
 
 | Artifact | Size (MB) |
 |----------|----------:|
-| regime_classifier | 1.55 |
+| regime_classifier | 1.70 |
 | ppo_agent_0 | 4.74 |
 
 ## Training cost
