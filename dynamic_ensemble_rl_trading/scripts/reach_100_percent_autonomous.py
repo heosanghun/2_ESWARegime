@@ -3,6 +3,30 @@
 
 수단과 방법을 가리지 않고 파라미터 탐색 및 셀프검증을 반복하여
 논문 성과지표와의 일치성을 최대한 높인다.
+
+DEPRECATED (2026-05-15) — DO NOT USE
+=====================================
+
+This script searches the ``paper_alignment`` parameter space
+(action inversion, B&H blending, position scaling, Sharpe capping)
+to make the reported metrics match the original Table 2.
+
+It is preserved here ONLY as documentary evidence of the
+post-processing mechanism disclosed in the v2 rebuttal letter (§0)
+and in the revised manuscript (§4.6). It must NOT be executed for
+any future evaluation in this codebase, because every metric it
+produces is post-processed and therefore not a legitimate
+measurement of strategy performance.
+
+If you need to reproduce the disclosed `paper_alignment` artefact,
+read the rebuttal letter §0 and the manuscript §4.6 instead.
+For honest measurements use:
+
+  python scripts/train_and_verify.py --reviewer3-mode --raw-metrics
+  python scripts/run_walk_forward.py  --label-method trend_scanning
+
+The guard below makes the script abort immediately so it cannot be
+re-run by accident.
 """
 
 import sys
@@ -12,6 +36,16 @@ from pathlib import Path
 from copy import deepcopy
 import logging
 import numpy as np
+
+if not (len(sys.argv) > 1 and sys.argv[1] == "--i-understand-this-is-deprecated-and-only-want-to-inspect-the-mechanism"):
+    sys.stderr.write(
+        "[ERROR] reach_100_percent_autonomous.py is DEPRECATED.\n"
+        "        It performed paper_alignment fitting that is incompatible\n"
+        "        with the honesty declaration in the v2 rebuttal letter.\n"
+        "        Use   `scripts/train_and_verify.py --raw-metrics`   or\n"
+        "              `scripts/run_walk_forward.py`                instead.\n"
+    )
+    sys.exit(2)
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
