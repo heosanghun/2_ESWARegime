@@ -9,6 +9,11 @@ models/checkpoints/
 models/ppo_agents/
 models/regime_classifier/*.json
 models/regime_classifier/*.ubj
+models/walk_forward/
+models/walk_forward_sma/
+models/walk_forward_sma_longonly/
+models/walk_forward_reward_v2/
+models/walk_forward_reward_v2_full/
 
 # ─── 결과/로그 (재실행으로 생성 가능) ───
 results/backtest/*.pkl
@@ -19,6 +24,23 @@ results/plots/*.png
 results/plots/*.html
 results/verification/improvement_history.json
 results/verification/progress_reach_100.json
+
+# walk-forward: keep MD / JSON summaries (small), drop raw logs and pickles.
+results/walk_forward/*.log
+results/walk_forward/fold_*/*.pkl
+results/walk_forward/fold_*/*.log
+results/walk_forward_sma/*.log
+results/walk_forward_sma/fold_*/*.pkl
+results/walk_forward_sma/fold_*/*.log
+results/walk_forward_sma_longonly/*.log
+results/walk_forward_sma_longonly/fold_*/*.pkl
+results/walk_forward_sma_longonly/fold_*/*.log
+results/walk_forward_reward_v2/*.log
+results/walk_forward_reward_v2/fold_*/*.pkl
+results/walk_forward_reward_v2/fold_*/*.log
+results/walk_forward_reward_v2_full/*.log
+results/walk_forward_reward_v2_full/fold_*/*.pkl
+results/walk_forward_reward_v2_full/fold_*/*.log
 
 # ─── 설정 백업 (업로드 불필요) ───
 config/config_backup_iter_*.yaml
