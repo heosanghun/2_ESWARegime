@@ -1,15 +1,39 @@
 """
 Regime-specific reward functions.
 
-This module implements the three reward functions for different market regimes:
-- Bull: Maximize profit (simple return)
-- Bear: Maximize Sortino Ratio and minimize drawdown
-- Sideways: Penalty for frequent trading (whipsaw avoidance)
+This module implements three regime-aware reward functions for the PPO
+agent pools. The v2 redesign (May 2026, following ESWA-D-26-08980
+review) targets the failure mode documented in the overnight
+diagnostic: even when the classifier is given near-perfect labels via
+the lagging SMA scheme, the Bear pool fails to exploit a confirmed
+bear test window. The cause was a reward function (Sortino over a
+30-bar window) that produced a sparse, low-amplitude signal which
+PPO could not credit-assign at hourly granularity.
+
+The v2 reward design (see :pymeth:`RegimeRewardCalculator.calculate_reward`)
+combines three terms:
+
+1. **Realised log return per step** (signal for portfolio growth).
+2. **Direction-alignment bonus** ``alpha * w * r``, where ``w`` is the
+   signed position weight in ``[-1, 1]`` and ``r`` is the bar return.
+   This is mathematically related to the realised PnL but is *scaled
+   separately*, amplifying the gradient PPO sees toward correctly
+   directional positions in each regime.
+3. **Cost drag** (transaction cost normalised by previous PV).
+
+A per-regime shaping term then biases the agent toward
+regime-appropriate behaviour:
+
+* **Bull**: extra bonus for ``w > 0`` (long bias).
+* **Bear**: extra bonus for ``w < 0`` (short bias), with an asymmetric
+  penalty for going long during down-bars.
+* **Sideways**: penalty proportional to ``|w|`` to favour cash.
 """
 
-import numpy as np
-from typing import Optional
 import logging
+from typing import Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -17,16 +41,31 @@ logger = logging.getLogger(__name__)
 class RegimeRewardCalculator:
     """
     Calculates regime-specific rewards for RL agents.
-    
+
     Each market regime has a specialized reward function designed to
     elicit optimal behavior for that specific market condition.
+
+    The v2 API accepts two additional keyword arguments compared to v1:
+
+    * ``target_weight`` — signed portfolio weight the agent just
+      committed to in ``[-1, +1]``.
+    * ``bar_return`` — the bar's *realised* simple return
+      ``(next_close - next_open) / next_open``.
+
+    Both are optional; if omitted the function falls back to the v1
+    behaviour (purely PV-based reward, kept for backward compatibility
+    with any external callers that have not migrated yet).
     """
-    
+
     def __init__(
         self,
         transaction_cost: float = 0.0005,  # 0.05%
         risk_free_rate: float = 0.0,
         reward_scale: float = 100.0,  # Scale rewards for hourly data
+        direction_bonus_coef: float = 3.0,  # alpha for w*r term
+        cost_coef: float = 1.0,
+        regime_shaping_coef: float = 0.2,  # weight on regime-specific term
+        wrong_side_penalty_coef: float = 1.5,
     ):
         """
         Initialize the reward calculator.
@@ -44,137 +83,169 @@ class RegimeRewardCalculator:
         self.transaction_cost = transaction_cost
         self.risk_free_rate = risk_free_rate
         self.reward_scale = reward_scale
-        
-        # Track portfolio history for Sortino Ratio calculation
+        self.direction_bonus_coef = direction_bonus_coef
+        self.cost_coef = cost_coef
+        self.regime_shaping_coef = regime_shaping_coef
+        self.wrong_side_penalty_coef = wrong_side_penalty_coef
+
+        # Track portfolio history for Sortino Ratio calculation (legacy)
         self.portfolio_returns: list = []
         self.portfolio_values: list = []
     
+    # ------------------------------------------------------------------
+    # Helper utilities
+    # ------------------------------------------------------------------
+    def _safe_pv_pct(self, pv_before: float, pv_after: float) -> float:
+        if pv_before <= 0:
+            return 0.0
+        return (pv_after - pv_before) / pv_before
+
+    def _normalised_cost(self, txn_cost: float, pv_before: float) -> float:
+        if pv_before <= 0:
+            return 0.0
+        return txn_cost / pv_before
+
+    def _direction_term(
+        self,
+        target_weight: Optional[float],
+        bar_return: Optional[float],
+    ) -> float:
+        """Signed position * bar return. Zero when either is missing."""
+        if target_weight is None or bar_return is None:
+            return 0.0
+        return float(target_weight) * float(bar_return)
+
+    # ------------------------------------------------------------------
+    # Regime-specific rewards (v2)
+    # ------------------------------------------------------------------
     def calculate_bull_reward(
         self,
         portfolio_value_before: float,
         portfolio_value_after: float,
-        transaction_cost_incurred: float = 0.0
+        transaction_cost_incurred: float = 0.0,
+        target_weight: Optional[float] = None,
+        bar_return: Optional[float] = None,
     ) -> float:
         """
-        Calculate reward for Bull market regime.
-        
-        Reward: R_bull = (V_{t+1} - V_t) / V_t
-        This directly incentivizes profit maximization in rising markets.
-        Transaction costs are intentionally omitted to encourage
-        momentum capture.
-        
-        Parameters
-        ----------
-        portfolio_value_before : float
-            Portfolio value at time t (V_t).
-        portfolio_value_after : float
-            Portfolio value at time t+1 (V_{t+1}).
-        transaction_cost_incurred : float, default=0.0
-            Transaction cost incurred (not used in Bull reward).
-        
-        Returns
-        -------
-        float
-            Bull market reward.
+        Bull market reward (v2).
+
+        ``R_bull = pv_pct + alpha * w * r - lambda_c * tx_norm
+                    + beta * max(0, w) * max(0, r)``
+
+        The first three terms are the unified core reward; the trailing
+        term biases the policy toward long exposure during up-bars.
         """
         if portfolio_value_before <= 0:
             return 0.0
-        
-        # Simple return: R = (V_{t+1} - V_t) / V_t  (scaled)
-        reward = (portfolio_value_after - portfolio_value_before) / portfolio_value_before
-        
+
+        pv_pct = self._safe_pv_pct(portfolio_value_before, portfolio_value_after)
+        cost_drag = self._normalised_cost(transaction_cost_incurred, portfolio_value_before)
+        direction = self._direction_term(target_weight, bar_return)
+
+        reward = (
+            pv_pct
+            + self.direction_bonus_coef * direction
+            - self.cost_coef * cost_drag
+        )
+
+        # Regime shaping: bonus for being long when bar return is positive.
+        if target_weight is not None and bar_return is not None:
+            long_part = max(0.0, float(target_weight))
+            up_part = max(0.0, float(bar_return))
+            reward += self.regime_shaping_coef * long_part * up_part
+
         return reward * self.reward_scale
     
     def calculate_bear_reward(
         self,
         portfolio_value_before: float,
         portfolio_value_after: float,
-        transaction_cost_incurred: float
+        transaction_cost_incurred: float,
+        target_weight: Optional[float] = None,
+        bar_return: Optional[float] = None,
     ) -> float:
         """
-        Calculate reward for Bear market regime.
-        
-        Reward: R_bear = SortinoRatio - C * TransactionCost
-        
-        The Sortino Ratio focuses on downside risk, which is critical
-        for capital preservation during bear markets.
-        
-        Parameters
-        ----------
-        portfolio_value_before : float
-            Portfolio value at time t.
-        portfolio_value_after : float
-            Portfolio value at time t+1.
-        transaction_cost_incurred : float
-            Transaction cost incurred.
-        
-        Returns
-        -------
-        float
-            Bear market reward.
+        Bear market reward (v2).
+
+        ``R_bear = pv_pct + alpha * w * r - lambda_c * tx_norm
+                    + beta * max(0, -w) * max(0, -r)
+                    - gamma * max(0, w) * max(0, -r)``
+
+        The Sortino-ratio formulation used in v1 was abandoned because
+        it produced a low-amplitude, sparse reward that PPO could not
+        credit-assign at hourly granularity. The new shaping has two
+        terms:
+
+        * **Short alignment bonus** — reward shorting in down-bars.
+        * **Wrong-side penalty** — punish long exposure during
+          confirmed down-bars (this is where capital is destroyed in
+          a bear regime).
         """
         if portfolio_value_before <= 0:
             return 0.0
-        
-        # Calculate return
-        portfolio_return = (
-            (portfolio_value_after - portfolio_value_before) / portfolio_value_before
-        )
-        
-        # Update portfolio history
-        self.portfolio_returns.append(portfolio_return)
+
+        pv_pct = self._safe_pv_pct(portfolio_value_before, portfolio_value_after)
+        cost_drag = self._normalised_cost(transaction_cost_incurred, portfolio_value_before)
+        direction = self._direction_term(target_weight, bar_return)
+
+        # Keep Sortino tracking for diagnostics (cheap; not used in reward).
+        self.portfolio_returns.append(pv_pct)
         self.portfolio_values.append(portfolio_value_after)
-        
-        # Calculate Sortino Ratio
-        sortino_ratio = self._calculate_sortino_ratio()
-        
-        # Bear reward: Sortino Ratio - C * TransactionCost  (scaled)
-        reward = sortino_ratio - self.transaction_cost * transaction_cost_incurred
-        
+
+        reward = (
+            pv_pct
+            + self.direction_bonus_coef * direction
+            - self.cost_coef * cost_drag
+        )
+
+        if target_weight is not None and bar_return is not None:
+            short_part = max(0.0, -float(target_weight))
+            down_part = max(0.0, -float(bar_return))
+            long_part = max(0.0, float(target_weight))
+
+            reward += self.regime_shaping_coef * short_part * down_part
+            reward -= self.wrong_side_penalty_coef * long_part * down_part
+
         return reward * self.reward_scale
     
     def calculate_sideways_reward(
         self,
         portfolio_value_before: float,
         portfolio_value_after: float,
-        transaction_cost_incurred: float
+        transaction_cost_incurred: float,
+        target_weight: Optional[float] = None,
+        bar_return: Optional[float] = None,
     ) -> float:
         """
-        Calculate reward for Sideways market regime.
-        
-        Reward: R_sideways = R_bull - 5 * TransactionCost
-        
-        This heavily penalizes frequent trading to avoid whipsaw losses
-        in directionless markets. The factor of 5 is a design choice to
-        strongly discourage unnecessary trades.
-        
-        Parameters
-        ----------
-        portfolio_value_before : float
-            Portfolio value at time t.
-        portfolio_value_after : float
-            Portfolio value at time t+1.
-        transaction_cost_incurred : float
-            Transaction cost incurred.
-        
-        Returns
-        -------
-        float
-            Sideways market reward.
+        Sideways market reward (v2).
+
+        ``R_sideways = pv_pct + alpha * w * r - 5 * lambda_c * tx_norm
+                       - beta * |w| * |r|``
+
+        In a sideways regime the rational behaviour is to stay close
+        to cash. The ``|w| * |r|`` penalty makes any non-flat position
+        costly proportional to bar volatility, while the heavier
+        transaction-cost coefficient discourages whipsaw trading.
         """
-        # Calculate Bull reward (base return)
-        bull_reward = self.calculate_bull_reward(
-            portfolio_value_before,
-            portfolio_value_after,
-            transaction_cost_incurred
+        if portfolio_value_before <= 0:
+            return 0.0
+
+        pv_pct = self._safe_pv_pct(portfolio_value_before, portfolio_value_after)
+        cost_drag = self._normalised_cost(transaction_cost_incurred, portfolio_value_before)
+        direction = self._direction_term(target_weight, bar_return)
+
+        reward = (
+            pv_pct
+            + self.direction_bonus_coef * direction
+            - 5.0 * self.cost_coef * cost_drag
         )
-        
-        # Sideways reward: R_bull - 5 * TransactionCost
-        # (Note: bull_reward already scaled)
-        penalty = 5.0 * self.transaction_cost * transaction_cost_incurred * self.reward_scale
-        reward = bull_reward - penalty
-        
-        return reward
+
+        if target_weight is not None and bar_return is not None:
+            position_size = abs(float(target_weight))
+            move_size = abs(float(bar_return))
+            reward -= self.regime_shaping_coef * position_size * move_size
+
+        return reward * self.reward_scale
     
     def _calculate_sortino_ratio(
         self,
@@ -245,49 +316,57 @@ class RegimeRewardCalculator:
         regime: str,
         portfolio_value_before: float,
         portfolio_value_after: float,
-        transaction_cost_incurred: float = 0.0
+        transaction_cost_incurred: float = 0.0,
+        target_weight: Optional[float] = None,
+        bar_return: Optional[float] = None,
     ) -> float:
         """
-        Calculate reward based on market regime.
-        
+        Dispatch to the regime-specific reward.
+
         Parameters
         ----------
         regime : str
-            Market regime: 'Bull', 'Bear', or 'Sideways'.
-        portfolio_value_before : float
-            Portfolio value before action.
-        portfolio_value_after : float
-            Portfolio value after action.
+            Market regime: ``'Bull'``, ``'Bear'``, or ``'Sideways'``.
+        portfolio_value_before, portfolio_value_after : float
+            Portfolio value before/after the action.
         transaction_cost_incurred : float, default=0.0
-            Transaction cost incurred.
-        
-        Returns
-        -------
-        float
-            Reward value.
+            Transaction cost in absolute units.
+        target_weight : float, optional
+            Signed portfolio weight just committed to in ``[-1, +1]``.
+            When provided, enables the v2 direction-alignment terms.
+        bar_return : float, optional
+            Simple return between next_open and next_close. When
+            provided, enables the v2 direction-alignment terms.
         """
         regime = regime.lower()
-        
-        if regime == 'bull':
+        kwargs = {
+            "target_weight": target_weight,
+            "bar_return": bar_return,
+        }
+
+        if regime == "bull":
             return self.calculate_bull_reward(
                 portfolio_value_before,
                 portfolio_value_after,
-                transaction_cost_incurred
+                transaction_cost_incurred,
+                **kwargs,
             )
-        elif regime == 'bear':
+        if regime == "bear":
             return self.calculate_bear_reward(
                 portfolio_value_before,
                 portfolio_value_after,
-                transaction_cost_incurred
+                transaction_cost_incurred,
+                **kwargs,
             )
-        elif regime == 'sideways':
+        if regime == "sideways":
             return self.calculate_sideways_reward(
                 portfolio_value_before,
                 portfolio_value_after,
-                transaction_cost_incurred
+                transaction_cost_incurred,
+                **kwargs,
             )
-        else:
-            raise ValueError(
-                f"Unknown regime: {regime}. Must be 'Bull', 'Bear', or 'Sideways'"
-            )
+
+        raise ValueError(
+            f"Unknown regime: {regime}. Must be 'Bull', 'Bear', or 'Sideways'"
+        )
 

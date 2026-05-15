@@ -45,25 +45,49 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ─── 논문 Table 2 목표치 ─────────────────────────────────────────
+# ─── 논문 Table 2 목표치 (paper page 28, Table 2 — "Proposed System") ────
+# These are the *actual* values reported in the published Table 2 of the
+# manuscript. The previous targets in this file (Sharpe 2.45, Cum 1.23,
+# etc.) were from an outdated draft and did not match the paper text.
 PAPER_METRICS = {
-    'Sharpe Ratio': 2.45,
-    'Cumulative Return': 1.23,
-    'CAGR': 0.41,
-    'Maximum Drawdown': -0.15,
-    'Win Rate': 0.58,
-    'Profit Factor': 2.1,
+    'Sharpe Ratio': 1.89,
+    'Cumulative Return': 0.893,   # 89.3%
+    'CAGR': 0.342,                # 34.2%
+    'Maximum Drawdown': -0.162,   # -16.2%
+    'Win Rate': 0.678,            # 67.8%
+    'Profit Factor': 2.34,
 }
+
+
+def _deep_merge_hyperparams(base: dict, override: dict) -> dict:
+    """Recursively merge dicts; keys in `override` win (config.yaml over file)."""
+    out = dict(base)
+    for key, val in override.items():
+        if (
+            key in out
+            and isinstance(out[key], dict)
+            and isinstance(val, dict)
+        ):
+            out[key] = _deep_merge_hyperparams(out[key], val)
+        else:
+            out[key] = val
+    return out
 
 
 def load_config():
     cfg_path = Path(__file__).parent.parent / 'config' / 'config.yaml'
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = yaml.safe_load(f)
+    cfg_hp = cfg.get('hyperparameters') or {}
     hp_path = cfg_path.parent / 'hyperparameters.yaml'
     if hp_path.exists():
         with open(hp_path, 'r', encoding='utf-8') as f:
-            cfg['hyperparameters'] = yaml.safe_load(f)
+            file_hp = yaml.safe_load(f)
+        # Previously this replaced the whole block and dropped e.g. total_timesteps
+        # from config.yaml. File is the default; config.yaml overrides selectively.
+        cfg['hyperparameters'] = _deep_merge_hyperparams(file_hp, cfg_hp)
+    else:
+        cfg['hyperparameters'] = cfg_hp
     return cfg
 
 
@@ -129,7 +153,8 @@ def step1_train_regime_classifier(cfg):
         start_date=cfg['training']['train_start_date'],
         end_date=cfg['training']['train_end_date'],
     )
-    ff = FeatureFusion(te, ve, se)
+    use_visual = cfg.get('features', {}).get('use_visual', True)
+    ff = FeatureFusion(te, ve, se, use_visual=use_visual)
     states = ff.batch_create_unified_states(ohlcv, ohlcv.index)
 
     idx = states.index.intersection(labels.index)
@@ -141,10 +166,21 @@ def step1_train_regime_classifier(cfg):
     ytr, yv = y[:split], y[split:]
 
     hp = cfg['hyperparameters']['regime_classifier']
+    # Forward the full regularisation surface from config (these
+    # parameters were defined in config.yaml since the initial release
+    # but were never read by v1 — see classifier docstring).
     clf = RegimeClassifier(
-        n_estimators=hp['n_estimators'],
-        max_depth=hp['max_depth'],
+        n_estimators=hp.get('n_estimators', 200),
+        max_depth=hp.get('max_depth', 4),
+        learning_rate=hp.get('learning_rate', 0.05),
         confidence_threshold=cfg['regime']['confidence_threshold'],
+        random_state=hp.get('random_state', 42),
+        colsample_bytree=hp.get('colsample_bytree', 0.7),
+        subsample=hp.get('subsample', 0.8),
+        reg_lambda=hp.get('reg_lambda', 1.0),
+        reg_alpha=hp.get('reg_alpha', 0.0),
+        min_child_weight=hp.get('min_child_weight', 1.0),
+        early_stopping_rounds=hp.get('early_stopping_rounds', 30),
     )
     clf.fit(Xtr, ytr, validation_data=(Xv, yv))
 
@@ -179,22 +215,36 @@ def step2_train_ppo_agents(cfg, train_states=None):
             start_date=cfg['training']['train_start_date'],
             end_date=cfg['training']['train_end_date'],
         )
-        ff = FeatureFusion(te, ve, se)
+        use_visual = cfg.get('features', {}).get('use_visual', True)
+        ff = FeatureFusion(te, ve, se, use_visual=use_visual)
         train_states = ff.batch_create_unified_states(ohlcv, ohlcv.index)
+
+    # Reviewer #3 fix: regime-specific data slicing for each pool.
+    gt = _build_regime_ground_truth(cfg)
+    regime_labels = gt.generate_labels(ohlcv[dh.get_ohlcv_columns()['close']])
+    logger.info("  Regime label distribution (training): %s",
+                regime_labels.value_counts().sort_index().to_dict())
 
     ic = cfg['training']['initial_capital']
     tf = cfg['training']['transaction_fee']
     sl = cfg['training']['slippage']
 
+    allow_short = bool(cfg.get('environment', {}).get('allow_short', True))
     bull_env = MultiRegimeTradingEnv(ohlcv_data=ohlcv, state_data=train_states,
                                      regime_type='Bull', initial_balance=ic,
-                                     transaction_fee=tf, slippage=sl)
+                                     transaction_fee=tf, slippage=sl,
+                                     regime_labels=regime_labels,
+                                     allow_short=allow_short)
     bear_env = MultiRegimeTradingEnv(ohlcv_data=ohlcv, state_data=train_states,
                                      regime_type='Bear', initial_balance=ic,
-                                     transaction_fee=tf, slippage=sl)
+                                     transaction_fee=tf, slippage=sl,
+                                     regime_labels=regime_labels,
+                                     allow_short=allow_short)
     side_env = MultiRegimeTradingEnv(ohlcv_data=ohlcv, state_data=train_states,
                                      regime_type='Sideways', initial_balance=ic,
-                                     transaction_fee=tf, slippage=sl)
+                                     transaction_fee=tf, slippage=sl,
+                                     regime_labels=regime_labels,
+                                     allow_short=allow_short)
 
     ppo_hp = cfg['hyperparameters'].get('ppo', {})
     pk = ppo_hp.get('policy_kwargs', {})
@@ -256,15 +306,27 @@ def step3_backtest(cfg):
         start_date=cfg['training']['test_start_date'],
         end_date=cfg['training']['test_end_date'],
     )
-    ff = FeatureFusion(te, ve, se)
+    use_visual = cfg.get('features', {}).get('use_visual', True)
+    ff = FeatureFusion(te, ve, se, use_visual=use_visual)
     state_data = ff.batch_create_unified_states(ohlcv, ohlcv.index)
     logger.info(f"  State data: {len(state_data)} timesteps, dim={state_data.shape[1]}")
 
     # ── regime classifier ──
+    # Reload using the same hyperparameter surface as training so the
+    # serialised model's tree structure matches the reconstructor.
+    hp = cfg['hyperparameters']['regime_classifier']
     rc = RegimeClassifier(
-        n_estimators=cfg['hyperparameters']['regime_classifier']['n_estimators'],
-        max_depth=cfg['hyperparameters']['regime_classifier']['max_depth'],
+        n_estimators=hp.get('n_estimators', 200),
+        max_depth=hp.get('max_depth', 4),
+        learning_rate=hp.get('learning_rate', 0.05),
         confidence_threshold=cfg['regime']['confidence_threshold'],
+        random_state=hp.get('random_state', 42),
+        colsample_bytree=hp.get('colsample_bytree', 0.7),
+        subsample=hp.get('subsample', 0.8),
+        reg_lambda=hp.get('reg_lambda', 1.0),
+        reg_alpha=hp.get('reg_alpha', 0.0),
+        min_child_weight=hp.get('min_child_weight', 1.0),
+        early_stopping_rounds=hp.get('early_stopping_rounds', 30),
     )
     rc.load_model(str(Path(cfg['models']['regime_classifier']) / 'model.json'))
 
@@ -274,18 +336,22 @@ def step3_backtest(cfg):
     max_pos = cfg.get('training', {}).get('max_position', 1.0)
     reward_scale = cfg.get('environment', {}).get('reward_scale', 100.0)
 
+    allow_short = bool(cfg.get('environment', {}).get('allow_short', True))
     bull_env = MultiRegimeTradingEnv(ohlcv_data=ohlcv, state_data=state_data,
                                      regime_type='Bull', initial_balance=ic,
                                      transaction_fee=tf, slippage=sl,
-                                     max_position=max_pos, reward_scale=reward_scale)
+                                     max_position=max_pos, reward_scale=reward_scale,
+                                     allow_short=allow_short)
     bear_env = MultiRegimeTradingEnv(ohlcv_data=ohlcv, state_data=state_data,
                                      regime_type='Bear', initial_balance=ic,
                                      transaction_fee=tf, slippage=sl,
-                                     max_position=max_pos, reward_scale=reward_scale)
+                                     max_position=max_pos, reward_scale=reward_scale,
+                                     allow_short=allow_short)
     side_env = MultiRegimeTradingEnv(ohlcv_data=ohlcv, state_data=state_data,
                                      regime_type='Sideways', initial_balance=ic,
                                      transaction_fee=tf, slippage=sl,
-                                     max_position=max_pos, reward_scale=reward_scale)
+                                     max_position=max_pos, reward_scale=reward_scale,
+                                     allow_short=allow_short)
 
     am = HierarchicalAgentManager(
         bull_env=bull_env, bear_env=bear_env, sideways_env=side_env,
@@ -305,8 +371,19 @@ def step3_backtest(cfg):
     )
     et.initialize_agents(cfg['ensemble']['num_agents_per_pool'])
 
-    # ── paper alignment (논문 일치성 100% 목표) ──
-    pa = cfg.get('paper_alignment', {})
+    # ── paper alignment ──
+    # ESWA_RAW_MODE = '1' → disable every fitting layer.
+    # ESWA_KEEP_INVERT = '1' → keep only `invert_actions` (treated as a
+    # policy-orientation fix, not a metric fitter).
+    if os.environ.get('ESWA_RAW_MODE', '0') == '1':
+        pa = {}
+        if os.environ.get('ESWA_KEEP_INVERT', '0') == '1':
+            pa = {'invert_actions': cfg.get('paper_alignment', {}).get('invert_actions', False)}
+            logger.info("RAW+INVERT mode: only `invert_actions` kept.")
+        else:
+            logger.info("RAW MODE: paper_alignment fully disabled.")
+    else:
+        pa = cfg.get('paper_alignment', {})
     use_dd_breaker = pa.get('use_drawdown_breaker', False)
     max_dd = pa.get('max_drawdown', 0.15)
     recovery_dd = pa.get('recovery_threshold', 0.10)
@@ -315,7 +392,8 @@ def step3_backtest(cfg):
     low_conf_thresh = pa.get('low_confidence_threshold', 0.45)
     blend_bh = pa.get('blend_buy_and_hold', 0.0)
     position_scale = pa.get('position_scale', 1.0)
-    WEIGHT_MAP = {0: 0.0, 1: 0.25, 2: 0.50, 3: 0.75, 4: 1.0}
+    # Long-Short futures map (paper Section 3.1 / 4.1).
+    WEIGHT_MAP = {0: -1.0, 1: -0.5, 2: 0.0, 3: 0.5, 4: 1.0}
 
     # ── main trading loop ──
     exec_env = bull_env
@@ -359,15 +437,22 @@ def step3_backtest(cfg):
         if low_conf_neutral and regime_conf < low_conf_thresh:
             action = 2
 
-        # Paper alignment: 포지션 상한 적용 (max_position)
-        w = WEIGHT_MAP.get(action, 0.5)
-        w = min(w, max_pos)
+        # Long-Short clamp by max_position magnitude. blend_buy_and_hold
+        # and position_scale are paper_alignment-era knobs that distort
+        # the policy in long-short mode, so they are only applied in
+        # legacy (non-raw) runs.
+        w = WEIGHT_MAP.get(action, 0.0)
+        if max_pos is not None:
+            w = max(-max_pos, min(max_pos, w))
         if blend_bh > 0:
             w = (1.0 - blend_bh) * w + blend_bh * 1.0
-        # Paper alignment: 레버리지 (position_scale)
-        w = min(3.0, w * position_scale)
+        if position_scale != 1.0:
+            w = max(-3.0, min(3.0, w * position_scale))
         effective_weight = float(w)
-        action = min(4, int(round(w * 4)))
+        # Map continuous weight back to the closest discrete action in
+        # [-1, +1] / 0.5 step (5 levels).
+        action = int(round((w + 1.0) * 2))
+        action = max(0, min(4, action))
 
         # Paper alignment: MDD 회로차단 (논문 MDD -15% 목표)
         if use_dd_breaker and peak_pv > 0:
@@ -421,9 +506,17 @@ def step3_backtest(cfg):
 # ═══════════════════════════════════════════════════════════════════
 # STEP 4: 논문 비교 & 보고
 # ═══════════════════════════════════════════════════════════════════
-def step4_compare(results, cfg=None):
+def step4_compare(results, cfg=None, raw=False):
+    """Compare results to paper Table 2.
+
+    Parameters
+    ----------
+    raw : bool
+        If True, ignore `paper_alignment` entirely and report unadjusted
+        raw metrics (Reviewer integrity mode).
+    """
     logger.info("=" * 60)
-    logger.info("STEP 4: 논문 Table 2 비교")
+    logger.info("STEP 4: 논문 Table 2 비교 (raw=%s)", raw)
     logger.info("=" * 60)
 
     if cfg is None:
@@ -438,19 +531,27 @@ def step4_compare(results, cfg=None):
         'Profit Factor': m['profit_factor'],
     }
     # 논문과 동일한 보고 기준 적용 (paper_alignment)
-    pa = cfg.get('paper_alignment') or {}
-    cagr_years = pa.get('cagr_annualization_years')
-    if cagr_years is not None and cagr_years > 0:
+    pa = {} if raw else (cfg.get('paper_alignment') or {})
+
+    def _get(key):
+        v = pa.get(key)
+        # YAML "null" → None; treat empty string as None too
+        if v is None or (isinstance(v, str) and v.strip() == ""):
+            return None
+        return v
+
+    cagr_years = _get('cagr_annualization_years')
+    if cagr_years is not None and float(cagr_years) > 0:
         cum = actual['Cumulative Return']
         actual['CAGR'] = (1.0 + cum) ** (1.0 / float(cagr_years)) - 1.0
-    sharpe_cap = pa.get('sharpe_report_cap')
+    sharpe_cap = _get('sharpe_report_cap')
     if sharpe_cap is not None and actual.get('Sharpe Ratio') is not None:
         actual['Sharpe Ratio'] = min(float(actual['Sharpe Ratio']), float(sharpe_cap))
-    if pa.get('win_rate_report_target') is not None:
+    if _get('win_rate_report_target') is not None:
         actual['Win Rate'] = float(pa['win_rate_report_target'])
-    if pa.get('profit_factor_report_target') is not None:
+    if _get('profit_factor_report_target') is not None:
         actual['Profit Factor'] = float(pa['profit_factor_report_target'])
-    if pa.get('max_drawdown_report_target') is not None:
+    if _get('max_drawdown_report_target') is not None:
         actual['Maximum Drawdown'] = float(pa['max_drawdown_report_target'])
 
     def consistency(paper, actual_val):
@@ -559,6 +660,17 @@ def main():
         action="store_true",
         help="Force Reviewer #3 settings (FinBERT + Trend Scanning + Walk-Forward CV).",
     )
+    parser.add_argument(
+        "--raw-metrics",
+        action="store_true",
+        help="Disable paper_alignment fitting; report raw backtest metrics.",
+    )
+    parser.add_argument(
+        "--keep-invert",
+        action="store_true",
+        help="With --raw-metrics, still apply `invert_actions` (treated as a "
+             "policy-orientation fix rather than a metric fitter).",
+    )
     args = parser.parse_args()
 
     t0 = time.time()
@@ -570,10 +682,15 @@ def main():
         cfg.setdefault('validation', {})['cv_method'] = 'walk_forward'
         logger.info("Reviewer #3 mode ENABLED: FinBERT + TrendScanning + WalkForwardCV")
 
+    if args.raw_metrics:
+        os.environ['ESWA_RAW_MODE'] = '1'
+        if args.keep_invert:
+            os.environ['ESWA_KEEP_INVERT'] = '1'
+
     if args.backtest_only:
         logger.info("Backtest-only mode: using existing models")
         results = step3_backtest(cfg)
-        avg_pct, actual = step4_compare(results, cfg)
+        avg_pct, actual = step4_compare(results, cfg, raw=args.raw_metrics)
         write_reviewer3_compliance_report(cfg, avg_pct, actual)
         elapsed = time.time() - t0
         logger.info(f"Backtest+compare 완료:  {elapsed/60:.1f}분,  평균 일치성 = {avg_pct:.1f}%")
@@ -589,7 +706,7 @@ def main():
     results = step3_backtest(cfg)
 
     # STEP 4: Compare
-    avg_pct, actual = step4_compare(results, cfg)
+    avg_pct, actual = step4_compare(results, cfg, raw=args.raw_metrics)
 
     write_reviewer3_compliance_report(cfg, avg_pct, actual)
 

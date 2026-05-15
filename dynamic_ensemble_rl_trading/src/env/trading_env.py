@@ -31,8 +31,16 @@ class MultiRegimeTradingEnv(gym.Env):
 
     metadata = {'render_modes': ['human']}
 
-    # Long-only weight map (논문 기본 설정)
-    WEIGHT_MAP = {0: 0.0, 1: 0.25, 2: 0.50, 3: 0.75, 4: 1.0}
+    # ── Action → target portfolio weight maps ──
+    # The paper (Section 3.1, 4.1) operates on a **perpetual-futures**
+    # environment with long *and* short positions. Action 0/1 ("Strong
+    # Sell" / "Sell") open or increase shorts; action 3/4 ("Buy" /
+    # "Strong Buy") open or increase longs.
+    LONG_SHORT_WEIGHT_MAP = {0: -1.0, 1: -0.5, 2: 0.0, 3: 0.5, 4: 1.0}
+    # Legacy long-only mapping (kept for backward compatibility with
+    # tests, ablations, and the spot-trading sanity baseline).
+    LONG_ONLY_WEIGHT_MAP = {0: 0.0, 1: 0.25, 2: 0.50, 3: 0.75, 4: 1.0}
+    WEIGHT_MAP = LONG_SHORT_WEIGHT_MAP  # default → matches the paper
 
     def __init__(
         self,
@@ -45,6 +53,8 @@ class MultiRegimeTradingEnv(gym.Env):
         max_position: float = 1.0,
         reward_scale: float = 100.0,
         ohlcv_columns: Optional[dict] = None,
+        regime_labels: Optional[pd.Series] = None,
+        allow_short: bool = True,
     ):
         super().__init__()
 
@@ -56,6 +66,14 @@ class MultiRegimeTradingEnv(gym.Env):
         self.slippage = slippage
         self.max_position = max_position
         self.reward_scale = reward_scale
+        self.allow_short = allow_short
+        # Instance-level weight map: long-short for perpetual futures,
+        # long-only for the spot-baseline ablation.
+        self.weight_map = (
+            dict(self.LONG_SHORT_WEIGHT_MAP)
+            if allow_short
+            else dict(self.LONG_ONLY_WEIGHT_MAP)
+        )
 
         if ohlcv_columns is None:
             self.ohlcv_columns = {
@@ -71,6 +89,30 @@ class MultiRegimeTradingEnv(gym.Env):
             raise ValueError("No common timestamps between OHLCV and state data")
         self.ohlcv_data = self.ohlcv_data.loc[common_indices]
         self.state_data = self.state_data.loc[common_indices]
+
+        # Restrict training timesteps to the pool's regime label (Reviewer #3 fix).
+        # 0=Bear, 1=Sideways, 2=Bull. Without this, the Bear pool also sees Bull
+        # bars and learns to under-allocate, which broke the original training.
+        self._regime_label_map = {'bear': 0, 'sideways': 1, 'bull': 2}
+        self.regime_labels = None
+        if regime_labels is not None:
+            target = self._regime_label_map.get(self.regime_type.lower())
+            if target is not None:
+                self.regime_labels = regime_labels.reindex(self.state_data.index)
+                mask = self.regime_labels == target
+                if mask.sum() >= 50:
+                    self.ohlcv_data = self.ohlcv_data.loc[mask]
+                    self.state_data = self.state_data.loc[mask]
+                    logger.info(
+                        "[%s env] regime mask retains %d / %d bars",
+                        self.regime_type, int(mask.sum()), len(mask),
+                    )
+                else:
+                    logger.warning(
+                        "[%s env] regime mask would leave only %d bars; "
+                        "keeping the full series instead.",
+                        self.regime_type, int(mask.sum()),
+                    )
 
         # Spaces
         self.action_space = spaces.Discrete(5)
@@ -142,7 +184,12 @@ class MultiRegimeTradingEnv(gym.Env):
 
         # ── rebalance ──
         exec_price = next_open   # execution at next open
-        target_weight = self.WEIGHT_MAP.get(action, 0.5)
+        target_weight = self.weight_map.get(action, 0.0)
+        # Clamp magnitude (max_position can throttle leverage from config).
+        if self.max_position is not None:
+            target_weight = max(
+                -self.max_position, min(self.max_position, target_weight)
+            )
         target_value  = target_weight * pv_before
         target_qty    = target_value / exec_price if exec_price > 0 else 0.0
         qty_change    = target_qty - self.holdings_qty
@@ -171,8 +218,20 @@ class MultiRegimeTradingEnv(gym.Env):
         self.balance = self.cash
 
         # ── reward ──
+        # bar_return is the realised simple return between next_open and
+        # next_close, evaluated *after* the rebalance. Passing it (and
+        # the signed target_weight) to the reward calculator enables
+        # the v2 direction-alignment shaping terms.
+        bar_return = (
+            (next_close - next_open) / next_open if next_open > 0 else 0.0
+        )
         reward = self.reward_calculator.calculate_reward(
-            self.regime_type, pv_before, pv_after, txn_cost,
+            self.regime_type,
+            pv_before,
+            pv_after,
+            txn_cost,
+            target_weight=target_weight,
+            bar_return=bar_return,
         )
 
         # advance

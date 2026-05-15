@@ -33,23 +33,35 @@ class FeatureFusion:
         self,
         technical_extractor: TechnicalFeatureExtractor,
         visual_extractor: CandlestickGenerator,
-        sentiment_extractor: NewsSentimentExtractor
+        sentiment_extractor: NewsSentimentExtractor,
+        use_visual: bool = True,
     ):
         """
         Initialize the FeatureFusion module.
-        
+
         Parameters
         ----------
         technical_extractor : TechnicalFeatureExtractor
             Extractor for technical features.
         visual_extractor : CandlestickGenerator
-            Extractor for visual features.
+            Extractor for visual features. Kept on the object even
+            when ``use_visual=False`` to remain backward compatible
+            with downstream callers (e.g. inference-time API).
         sentiment_extractor : NewsSentimentExtractor
             Extractor for sentiment features.
+        use_visual : bool, default=True
+            When ``False`` the 512-D ResNet-18 branch is dropped
+            entirely from the unified state. The classifier ablation
+            (May 2026, ``scripts/_diag_classifier_ablation.py``)
+            showed visual features add zero predictive value on top
+            of technical + sentiment, while contributing 95% of the
+            observation dimension. Dropping them improves the
+            signal-to-noise ratio that downstream PPO sees.
         """
         self.technical_extractor = technical_extractor
         self.visual_extractor = visual_extractor
         self.sentiment_extractor = sentiment_extractor
+        self.use_visual = bool(use_visual)
     
     def create_unified_state(
         self,
@@ -88,19 +100,21 @@ class FeatureFusion:
         else:
             tech_features = tech_features_df.loc[timestamp].values
         
-        # Extract visual features F_visual
-        try:
-            visual_features = self.visual_extractor.process_timestamp(
-                ohlcv_data, timestamp, ohlcv_columns
-            )
-        except Exception as e:
-            logger.warning(
-                f"Error extracting visual features for {timestamp}: {e}. "
-                "Using zero vector."
-            )
-            # Fallback: use zero vector with expected dimension
-            visual_features = np.zeros(512)  # ResNet-18 feature dimension
-        
+        # Extract visual features F_visual only when enabled.
+        if self.use_visual:
+            try:
+                visual_features = self.visual_extractor.process_timestamp(
+                    ohlcv_data, timestamp, ohlcv_columns
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Error extracting visual features for {timestamp}: {e}. "
+                    "Using zero vector."
+                )
+                visual_features = np.zeros(512)  # ResNet-18 feature dimension
+        else:
+            visual_features = None
+
         # Extract sentiment features F_senti
         try:
             sentiment_df = self.sentiment_extractor.get_sentiment_features(
@@ -112,15 +126,16 @@ class FeatureFusion:
                 f"Error extracting sentiment features for {timestamp}: {e}. "
                 "Using zero vector."
             )
-            # Fallback: use zero vector
             sentiment_features = np.zeros(8)  # Expected sentiment feature count
-        
-        # Concatenate all features: S_t = [F_visual, F_tech, F_senti]
-        unified_state = np.concatenate([
-            visual_features,
-            tech_features,
-            sentiment_features
-        ])
+
+        # Concatenate. When visual is disabled the resulting state is
+        # ``[F_tech, F_senti]`` (≈27-D).
+        parts = []
+        if visual_features is not None:
+            parts.append(visual_features)
+        parts.append(tech_features)
+        parts.append(sentiment_features)
+        unified_state = np.concatenate(parts)
         
         # Validate dimensions
         if np.any(np.isnan(unified_state)) or np.any(np.isinf(unified_state)):
@@ -156,43 +171,50 @@ class FeatureFusion:
             DataFrame with unified state vectors, indexed by timestamp.
         """
         logger.info(f"Creating unified states for {len(timestamps)} timestamps")
-        
-        # Extract all features in batch
+
         tech_features_df = self.technical_extractor.extract_features(ohlcv_data)
-        
-        visual_features_df = self.visual_extractor.batch_process(
-            ohlcv_data, timestamps, ohlcv_columns
-        )
-        
+
+        if self.use_visual:
+            visual_features_df = self.visual_extractor.batch_process(
+                ohlcv_data, timestamps, ohlcv_columns
+            )
+        else:
+            visual_features_df = None
+            logger.info("  Visual branch disabled (use_visual=False)")
+
         sentiment_features_df = self.sentiment_extractor.get_sentiment_features(
             timestamps
         )
         
         # Align indices
-        common_timestamps = (
-            tech_features_df.index.intersection(timestamps)
-            .intersection(visual_features_df.index)
-            .intersection(sentiment_features_df.index)
+        # Intersect available indices across all enabled branches.
+        common_timestamps = tech_features_df.index.intersection(timestamps)
+        if visual_features_df is not None:
+            common_timestamps = common_timestamps.intersection(
+                visual_features_df.index
+            )
+        common_timestamps = common_timestamps.intersection(
+            sentiment_features_df.index
         )
         
         if len(common_timestamps) == 0:
             raise ValueError("No common timestamps found across all feature types")
         
-        # Combine features
         unified_states = []
         valid_timestamps = []
-        
+
         for timestamp in common_timestamps:
             try:
                 tech_features = tech_features_df.loc[timestamp].values
-                visual_features = visual_features_df.loc[timestamp].values
                 sentiment_features = sentiment_features_df.loc[timestamp].values
-                
-                unified_state = np.concatenate([
-                    visual_features,
-                    tech_features,
-                    sentiment_features
-                ])
+
+                parts = []
+                if visual_features_df is not None:
+                    parts.append(visual_features_df.loc[timestamp].values)
+                parts.append(tech_features)
+                parts.append(sentiment_features)
+
+                unified_state = np.concatenate(parts)
                 
                 # Clean any invalid values
                 unified_state = np.nan_to_num(
@@ -240,17 +262,16 @@ class FeatureFusion:
         int
             Dimension of S_t.
         """
-        # Visual features: ResNet-18 output (512)
-        visual_dim = 512
-        
-        # Technical features: number of normalized indicators
+        # Visual features: ResNet-18 output (512), zero when disabled.
+        visual_dim = 512 if self.use_visual else 0
+
         if sample_features_df is not None:
             tech_dim = len(sample_features_df.columns)
         else:
             tech_dim = len(self.technical_extractor.get_feature_names())
-        
+
         # Sentiment features: 8 features
         sentiment_dim = 8
-        
+
         return visual_dim + tech_dim + sentiment_dim
 

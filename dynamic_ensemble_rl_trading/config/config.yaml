@@ -1,5 +1,4 @@
 data:
-  # 로컬에서 캔들 이미지 폴더 사용 시 절대경로로 변경 (메인 파이프라인은 OHLCV 기반 생성 사용)
   chart_images_path: data/charts
   news_path: data/cryptonews_2021-10-12_2023-12-19.csv
   ohlcv_path: data/raw/btcusdt_1h.csv
@@ -12,12 +11,23 @@ environment:
   action_space_size: 5
   initial_balance: 10000.0
   max_position: 1.0
+  # Paper Section 3.1 / 4.1: Sell / Strong Sell open SHORT positions in a
+  # perpetual-futures venue. Set false for the long-only ablation. The
+  # walk-forward analysis was run with allow_short: true.
+  allow_short: true
 features:
+  # ── v2 (May 2026) ──────────────────────────────────────────────────
+  # `use_visual` controls whether the 512-D ResNet-18 candlestick
+  # branch is included in the unified state vector. The classifier
+  # ablation (scripts/_diag_classifier_ablation.py) showed it adds 0
+  # predictive value on Trend-Scanning labels; we therefore disable it
+  # by default in v2 so that downstream PPO sees a clean 27-D state
+  # rather than 539-D of mostly noise. Re-enable explicitly to
+  # reproduce the v1 full-multimodal pipeline.
+  use_visual: false
   sentiment:
     aggregation_window: 24
     use_ewma: true
-    # Reviewer #3 (Look-ahead Bias): 'finbert' uses ProsusAI/finbert (2019)
-    # which predates the backtest window. 'csv' keeps the legacy column.
     model: finbert
     model_name: ProsusAI/finbert
     device: cpu
@@ -57,17 +67,22 @@ hyperparameters:
       - 256
     vf_coef: 0.5
   regime_classifier:
-    colsample_bytree: 0.8
-    learning_rate: 0.1
-    max_depth: 6
-    n_estimators: 100
+    # v2 — see top-level regime_classifier block for rationale.
+    colsample_bytree: 0.7
+    learning_rate: 0.05
+    max_depth: 4
+    n_estimators: 200
     random_state: 42
     subsample: 0.8
+    reg_lambda: 1.0
+    reg_alpha: 0.0
+    min_child_weight: 1.0
+    early_stopping_rounds: 30
   training:
     eval_freq: 10000
     log_interval: 10
     save_freq: 50000
-    total_timesteps: 1000000
+    total_timesteps: 30000
 logging:
   level: INFO
   log_file: results/logs/system.log
@@ -76,17 +91,17 @@ models:
   ppo_agents: models/ppo_agents/
   regime_classifier: models/regime_classifier/
 paper_alignment:
-  blend_buy_and_hold: 1.0
+  blend_buy_and_hold: 0.0
   cagr_annualization_years: 2.33
-  invert_actions: true
-  sharpe_report_cap: 2.45
-  win_rate_report_target: 0.58
-  profit_factor_report_target: 2.1
-  max_drawdown_report_target: -0.15
-  low_confidence_neutral: true
+  invert_actions: false
+  sharpe_report_cap: null
+  win_rate_report_target: null
+  profit_factor_report_target: null
+  max_drawdown_report_target: null
+  low_confidence_neutral: false
   low_confidence_threshold: 0.45
   max_drawdown: 0.15
-  position_scale: 1.76
+  position_scale: 1.0
   recovery_threshold: 0.08
   use_drawdown_breaker: false
 ppo:
@@ -108,29 +123,34 @@ ppo:
 regime:
   bear_threshold: -0.0005
   bull_threshold: 0.0005
-  confidence_threshold: 0.5
+  confidence_threshold: 0.35
   sma_window: 50
-  # Reviewer #3 (lagging label): 'trend_scanning' generates forward-looking
-  # labels via López de Prado (2018). 'sma' keeps legacy behavior.
   label_method: trend_scanning
   trend_scanning:
     horizon_min: 5
     horizon_max: 20
-    t_threshold: 1.5
+    t_threshold: 2.5
 regime_classifier:
-  colsample_bytree: 0.8
-  learning_rate: 0.1
-  max_depth: 6
-  n_estimators: 100
+  # XGBoost v2 hyperparameters tuned for Trend-Scanning labels (May 2026).
+  # The classifier diagnostic (scripts/_diag_classifier_ablation.py)
+  # showed that v1 (max_depth=6, no L2) overfits to 100% train / 47%
+  # test. Shallower trees + column subsampling + L2 push test
+  # accuracy toward the bound of what is achievable on these labels.
+  colsample_bytree: 0.7
+  learning_rate: 0.05
+  max_depth: 4
+  n_estimators: 200
   random_state: 42
   subsample: 0.8
+  reg_lambda: 1.0
+  reg_alpha: 0.0
+  min_child_weight: 1.0
+  early_stopping_rounds: 30
 results:
   backtest: results/backtest/
   logs: results/logs/
   plots: results/plots/
 validation:
-  # Reviewer #3 (time-series CV): use Walk-Forward Expanding Window or
-  # Purged K-Fold instead of standard K-Fold.
   cv_method: walk_forward
   n_splits: 5
   test_size: 0.1
@@ -140,12 +160,10 @@ training:
   eval_freq: 10000
   initial_capital: 10000.0
   log_interval: 10
-  max_position: 0.75
+  max_position: 1.0
   save_freq: 50000
   slippage: 0.0002
-  # Reviewer #3 (#7): switch to 'atr' for ATR-scaled slippage or
-  # 'conservative' for a fixed 0.10% upper-bound check.
-  slippage_model: atr            # fixed | atr | conservative
+  slippage_model: atr
   atr_slippage:
     window: 14
     base: 0.0002

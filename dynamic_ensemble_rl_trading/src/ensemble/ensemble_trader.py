@@ -85,9 +85,13 @@ class EnsembleTrader:
         이전 스텝의 액션으로 포트폴리오를 업데이트합니다.
         (현재 스텝의 액션은 아직 기록되지 않은 상태)
         """
-        # Action → weight mapping (Long-only)
-        WEIGHT_MAP = {0: 0.0, 1: 0.25, 2: 0.50, 3: 0.75, 4: 1.0}
-        
+        # Action → weight mapping (Long-Short, matches paper Section 3.1).
+        # If the surrounding environment is configured as long-only via
+        # `allow_short=False`, the per-agent virtual PV will still be
+        # conservative — these weights are only used for *tracking*
+        # ensemble dispersion, not for actually placing trades.
+        WEIGHT_MAP = {0: -1.0, 1: -0.5, 2: 0.0, 3: 0.5, 4: 1.0}
+
         for agent_idx in self.agent_portfolio_values:
             if len(self.agent_actions[agent_idx]) < 1:
                 continue
