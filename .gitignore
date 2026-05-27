@@ -1,0 +1,3 @@
+# Reviewer bundle only (built by scripts/package_reviewer_bundle.py)
+dist/*
+!dist/ESWA-D-26-08980_reviewer_code.zip
