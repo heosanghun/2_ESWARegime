@@ -1,0 +1,70 @@
+{
+  "source_fold": 5,
+  "test_window": [
+    "2023-08-19",
+    "2023-12-19"
+  ],
+  "feature_dim": 539,
+  "groups": [
+    {
+      "name": "technical",
+      "start": 0,
+      "end": 19,
+      "size": 19
+    },
+    {
+      "name": "visual",
+      "start": 19,
+      "end": 531,
+      "size": 512
+    },
+    {
+      "name": "sentiment",
+      "start": 531,
+      "end": 539,
+      "size": 8
+    }
+  ],
+  "n_sample": 500,
+  "generated": "2026-05-27T00:17:49",
+  "gain_importance": {
+    "group_contributions": {
+      "technical": {
+        "sum_gain": 91.9713282585144,
+        "pct_of_total": 0.026485628532983273,
+        "mean_per_feature": 4.840596224132337
+      },
+      "visual": {
+        "sum_gain": 3336.35045003891,
+        "pct_of_total": 0.960792241982235,
+        "mean_per_feature": 6.516309472732246
+      },
+      "sentiment": {
+        "sum_gain": 44.17758655548096,
+        "pct_of_total": 0.012722129484781724,
+        "mean_per_feature": 5.52219831943512
+      }
+    },
+    "total_gain": 3472.4993648529053
+  },
+  "shap_importance": {
+    "group_contributions": {
+      "technical": {
+        "sum_mean_abs_shap": 0.08543267846107483,
+        "pct_of_total": 0.0301358347274416,
+        "mean_per_feature": 0.004496456761109202
+      },
+      "visual": {
+        "sum_mean_abs_shap": 2.6720352172851562,
+        "pct_of_total": 0.9425434522774285,
+        "mean_per_feature": 0.005218818783760071
+      },
+      "sentiment": {
+        "sum_mean_abs_shap": 0.0774519294500351,
+        "pct_of_total": 0.027320676201100104,
+        "mean_per_feature": 0.009681491181254387
+      }
+    },
+    "total_mean_abs_shap": 2.8349199295043945
+  }
+}

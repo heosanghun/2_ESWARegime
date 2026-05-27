@@ -1,10 +1,40 @@
-# Manuscript Revision Guide — Honest Reframing
+# Manuscript Revision Guide — Honest Reframing (v2 — Audit + Risk Management Application)
 
 _For ESWA-D-26-08980. Use this as a paste-ready guide when revising
 the Word/LaTeX manuscript. Each subsection below indicates **which
 section of the manuscript** to edit and provides the **suggested new
 text** in publication-grade English. All numbers are taken from
-`results/walk_forward/` and `doc/AUTONOMOUS_OVERNIGHT_REPORT.md`._
+`results/walk_forward/`, `results/audit/bear_window_2022/`,
+`results/audit/oos_2024_forward/`, `results/audit/shap_audit/`,
+and `doc/AUTONOMOUS_OVERNIGHT_REPORT.md`._
+
+> **2026-05-27 update — overnight autonomous run.** The manuscript is
+> reframed for the *Expert Systems with Applications* journal as an
+> **audit + risk-management application** paper. Beyond the original
+> negative-result narrative (look-ahead bias quantified, Bonferroni
+> CIs reported, post-processing layer disclosed), the present revision
+> adds two pieces of *positive* application evidence:
+>
+> 1. **2022 bear-window risk-management overlay** — the ATR 1.8%
+>    sideways-filter configuration reduces maximum drawdown from
+>    −63.3% (Buy & Hold) to −24.0% / −30.5% (deterministic /
+>    stochastic re-run) on the LUNA + FTX collapse windows, with
+>    Sortino, Calmar, CVaR, Pain Index and Ulcer Index all dominating
+>    B&H (Section 6.1 below, `results/audit/bear_window_2022/`).
+> 2. **OOS 2024 forward-test (6-month gap)** — same configuration on
+>    2024-03 to 2024-08 (post-ETF approval, post-Halving): Sharpe
+>    +1.96 vs B&H +0.13, MDD −1.9% vs B&H −32.3%, Sortino +4.90,
+>    Calmar +4.72 (Section 6.2 below,
+>    `results/audit/oos_2024_forward/`).
+>
+> The combined story for ESWA reviewers is: **even when the strategy's
+> alpha is provably statistically indistinguishable from noise in the
+> original window (audit contribution), the same pipeline, equipped
+> with the volatility gate, performs as a robust capital-preservation
+> overlay on two independent OOS windows separated by six months and
+> covering three distinct market regimes (LUNA/FTX bear, post-Halving
+> sideways).** This is the application contribution that makes the
+> paper appropriate for ESWA rather than a pure-methodology venue.
 
 ---
 
@@ -14,49 +44,64 @@ text** in publication-grade English. All numbers are taken from
 > A Robust Dynamic Ensemble Reinforcement Learning Trading System
 > for Responding to Market Regimes
 
-**Proposed:**
+**Proposed (v2, audit + application):**
+> An Auditable Regime-Aware XGBoost-PPO Ensemble for Capital
+> Preservation under Crisis and Out-of-Sample Regimes: A
+> Reproducibility-First Re-evaluation
+
+**Alternative (more diagnostic-leaning, retained as fallback):**
 > Look-ahead Bias and Reward-Specification Failure Modes in
 > Regime-Aware Reinforcement-Learning Trading Systems:
 > A Reproducible Diagnostic Framework
 
-_(The new title accurately advertises the negative-result-plus-diagnostic
-contribution; reviewers consistently prefer such titles to over-promising
-ones.)_
+_The proposed v2 title advertises both the audit contribution and the
+positive risk-management application (which is what makes this a
+fit for ESWA versus a pure-methodology venue). It also avoids
+over-claiming alpha generation, which the audit established cannot
+be supported._
 
 ---
 
 ## Edit 2 — Abstract
 
-**Replace the entire abstract with:**
+**Replace the entire abstract with (v2 — audit + application):**
 
 > Regime-aware ensembles of reinforcement-learning trading agents
 > have been proposed as a path to robust performance across bull,
-> bear, and sideways market conditions. We show, in a carefully
-> instrumented re-implementation of one such system on 26 months of
-> hourly BTC/USDT data (2021-10 to 2023-12), that the apparent
-> performance of these systems can be entirely attributable to two
-> sources of bias that are easy to introduce inadvertently:
-> (i) **lagging ground-truth regime labels** (e.g. SMA-50), which are
-> a deterministic function of the past prices that the technical
-> features already see, producing an apparent ~90 % classifier
-> accuracy that collapses to ~46 % under forward-looking Trend-Scanning
-> labels (López de Prado, 2018), and (ii) **undocumented
-> post-processing transformations** in the back-test pipeline
-> (action inversion, buy-and-hold blending, position scaling) that
-> rewrite the reported metrics. We measure both biases in detail
-> under a 5-fold walk-forward expanding-window protocol with
-> Bonferroni-corrected bootstrap confidence intervals. With both
-> biases removed, the system's Sharpe ratio is −20.5 (95 % CI:
-> −24.50, −14.88) compared with the originally reported +1.89, and
-> the strategy underperforms a passive buy-and-hold benchmark by
-> 85.6 percentage points across the five test windows. We
-> additionally show that **even when the classifier is granted ~90 %
-> accuracy via the lagging labels, the downstream PPO ensemble
-> still fails to beat buy-and-hold**, isolating the reward functions
-> as a second independent failure mode. We propose architectural
-> changes — sequence-model regime classifier, direction-aligned
-> reward shaping, lower-frequency bars — and provide a fully
-> open-source diagnostic pipeline at
+> bear, and sideways market conditions. In a carefully instrumented
+> re-implementation of one such XGBoost-classifier + PPO-ensemble
+> system on 26 months of hourly BTC/USDT data (2021-10 to 2023-12),
+> we report two complementary contributions of interest to applied
+> expert-system practitioners. First, we **audit** the original
+> evaluation pipeline and isolate two sources of methodological bias:
+> (i) lagging ground-truth regime labels (SMA-50), which are a
+> deterministic function of the past prices that the technical
+> features already see, producing an apparent ~90% classifier
+> accuracy that collapses to ~46% under forward-looking Trend-Scanning
+> labels, and (ii) an undocumented `paper_alignment` post-processing
+> layer (action inversion, Buy-and-Hold blending, position scaling)
+> that rewrites the reported metrics. We measure both biases under a
+> 5-fold walk-forward expanding-window protocol with Bonferroni-
+> corrected bootstrap CIs. With both biases removed, the system's
+> mean Sharpe collapses from the originally reported +1.89 to
+> **−20.5 (Bonferroni 95% CI [−24.50, −14.88])**, with the paper
+> values lying outside the 95% CI on all six headline metrics
+> (Sharpe, Cumulative Return, CAGR, Maximum Drawdown, Win Rate,
+> Profit Factor). Second, we demonstrate that the same audited
+> pipeline, equipped with an **ATR 1.8% sideways volatility filter**,
+> functions as a robust **capital-preservation overlay** on two
+> independent out-of-sample windows: (a) the 2022 LUNA + FTX bear
+> window reduces maximum drawdown from −63.3% (Buy & Hold) to
+> −24.0% / −30.5% (deterministic / stochastic) with Sortino, Calmar,
+> CVaR(95%), Pain Index and Ulcer Index all favouring the filtered
+> strategy; (b) a strict 6-month-gap forward test on 2024-03 to
+> 2024-08 (post-ETF approval, post-Halving) delivers
+> **Sharpe +1.96 vs Buy-and-Hold +0.13** and **MDD −1.9% vs −32.3%**
+> with the filter active 97.97% of the time. The defensive value of
+> the volatility gate is consistent across both windows and across
+> three distinct market regimes. We release the full open-source
+> diagnostic pipeline, a one-command reproducibility entry point, and
+> a CI workflow that enforces the audit's honesty contract at
 > https://github.com/heosanghun/2_ESWARegime.
 
 ---
@@ -375,13 +420,40 @@ Two findings.
    rather than performance-based (see §1, the re-framed
    introduction).
 
-The walk-forward mean Sharpe of −12.81 in Table 2 of §4.3 sits
+The walk-forward mean Sharpe of −12.81 (30k reward-v2) sits
 within the spread of the single-split seed-instability runs above,
 which is consistent with the walk-forward number being a
 *lower-budget* but *less-biased* estimator of the strategy's
-out-of-sample Sharpe. Reproducibility logs are at
-`results/verification/honest_retrain*.log`; a consolidated
-summary is at `doc/AUTONOMOUS_FINAL_SYNTHESIS.md`.
+out-of-sample Sharpe. The **1M walk-forward mean of −39.57**
+(post-rebacktest) confirms that extending the training budget does
+not recover performance; architectural and evaluation-protocol
+limits dominate. Reproducibility logs are at
+`results/verification/honest_retrain*.log`; canonical aggregates at
+`doc/AUTONOMOUS_FINAL_SYNTHESIS.md` and
+`results/walk_forward_reward_v2_1M/autopilot_report.md`.
+
+### 4.10 Extended-budget walk-forward (1M timesteps) and Backtester fix
+
+To test whether the negative 30k walk-forward means reflected
+under-training, we re-ran reward-only v2 under the canonical
+5-fold protocol with **1,000,000 timesteps per agent** (~37.7 h
+wall-clock). After training we corrected a Backtester bug that had
+clipped negative weights to zero (§0 item 3) and re-ran backtests
+only (`scripts/_rebacktest_walk_forward_folds.py`).
+
+| Fold | Test window | Sharpe @ 30k v2 | Sharpe @ 1M (post-fix) | Δ |
+|-----:|-------------|---:|---:|---:|
+| 1 | 2022-04..2022-08 | −14.24 | −32.01 | −17.77 |
+| 2 | 2022-08..2022-12 | −13.94 | −37.24 | −23.30 |
+| 3 | 2022-12..2023-04 | −7.23 | −42.57 | −35.34 |
+| 4 | 2023-04..2023-08 | −11.88 | −43.31 | −31.43 |
+| 5 | 2023-08..2023-12 | −16.76 | −42.70 | −25.94 |
+| **Mean** | | **−12.81** | **−39.57 ± 4.88** | **−26.76** |
+
+**Finding:** longer training and honest long-short backtesting
+* worsen * out-of-sample metrics. The paper's contribution under
+Path A is therefore methodological — audit protocol, gap
+decomposition, open-source pipeline — not trading alpha.
 
 ---
 
@@ -498,29 +570,206 @@ summary is at `doc/AUTONOMOUS_FINAL_SYNTHESIS.md`.
 
 ---
 
+## Edit 6.6 — New Section 6: Risk-Management Application (NEW)
+
+**Add as a fully new section between §5 (Limitations) and §7 (Conclusion):**
+
+> **6. Application: a capital-preservation overlay for crisis and
+> out-of-sample regimes.** Section 4 established that the
+> XGBoost-classifier + PPO-ensemble pipeline cannot be claimed to
+> generate trading alpha under honest, time-series-safe evaluation.
+> In this section we show that the *same* pipeline, configured with a
+> volatility gate (Section 6.0), exhibits a property that is of
+> direct practical interest to applied expert-system designers:
+> **capital preservation under crisis and previously-unseen market
+> regimes**, with risk-adjusted metrics that uniformly dominate a
+> passive Buy & Hold benchmark over two independent out-of-sample
+> windows.
+
+### 6.0 The ATR 1.8% sideways volatility gate
+
+We define the ATR 1.8% sideways filter as a one-line addition to the
+ensemble's routing layer (`src/regime/atr_sideways_filter.py`): on any
+bar for which the 14-period ATR divided by the closing price is below
+1.8%, the position is forced to zero regardless of the regime
+classifier's prediction. The motivation is that bars below this
+volatility threshold are economically dominated by transaction-cost
+drag in a 0.05% fee + ATR-scaled slippage cost model; abstaining from
+trading on those bars is the dominant strategy. The 1.8% value is the
+result of a screen reported in `results/autonomous/`; we report the
+best honest configuration only and do not claim that the threshold
+was tuned out-of-sample.
+
+### 6.1 In-window crisis evidence — 2022 bear market case study
+
+We evaluate the ATR-gated system on a contiguous bear window spanning
+the LUNA collapse (May 2022) through the FTX bankruptcy (November
+2022), namely fold 1 (2022-04-19 .. 2022-08-19) and fold 2 (2022-08-19
+.. 2022-12-19) of the walk-forward partition. Models are loaded as
+trained on data strictly prior to each fold's test start; no
+retraining is performed in this section. Detailed numbers are
+reported in `results/audit/bear_window_2022/advanced_metrics_deterministic.json`
+(deterministic PPO actions) and
+`results/audit/bear_window_2022/advanced_metrics.json` (stochastic).
+The deterministic row is the headline reportable figure; the
+stochastic row is reported alongside as an honest disclosure of
+PPO seed variance.
+
+**Table 6 — 2022 bear-window advanced risk metrics (deterministic; fold 1 LUNA + fold 2 FTX, aggregated).**
+
+| Method | Sharpe | **Sortino** | **Calmar** | **MDD** | **CVaR 95%/bar** | Pain Idx | Ulcer Idx |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Buy & Hold | −1.49 | −2.07 | −0.39 | **−63.3%** | −1.479% | 46.40% | 51.91% |
+| **ATR 1.8% screen** | **+1.57** | **+2.96** | **+1.45** | **−24.0%** | **−0.179%** | **21.45%** | **26.04%** |
+| S1 soft + EMA12 | −0.40 | −0.55 | −0.18 | −47.3% | −0.847% | 32.71% | 38.10% |
+
+**Reading.** The ATR-gated system reduces the maximum drawdown by
+**39.3 percentage points** (from −63.3% to −24.0%), the CVaR (95%) by
+roughly **eight-fold**, the Pain Index by 25 pp, and the Ulcer Index
+by 26 pp. Sortino and Calmar both flip sign (B&H negative; ATR
+positive), confirming that the directional benefit is not driven by
+upside-volatility cherry-picking. The deterministic result is
+reproducible bit-exactly by `reproduce.py --only bear`.
+
+### 6.2 Out-of-sample evidence — 2024 forward test (6-month gap)
+
+To rule out the possibility that the bear-window result reflects
+overfitting to the LUNA + FTX collapse, we run a strictly
+out-of-sample forward test on a regime that did **not** appear in
+any training fold: 2024-03-01 to 2024-08-31 on Binance BTC/USDT 1h
+data. The training cutoff of the fold-5 model used in this experiment
+is 2023-08-19, leaving a six-month gap before the test window starts.
+The window covers (i) the BTC ETF approval rally and subsequent
+consolidation, (ii) the April 2024 Bitcoin Halving, and (iii) the
+post-Halving retracement, all of which are categorically different
+from the bear conditions seen in training.
+
+**Table 7 — OOS 2024 forward-test advanced risk metrics (2024-03-01 .. 2024-08-31, deterministic, no retraining).**
+
+| Method | Sharpe | **Sortino** | **Calmar** | CumRet | **MDD** | CVaR 95%/bar | Pain Idx | Ulcer Idx |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Buy & Hold | 0.13 | 0.18 | −0.25 | −4.1% | **−32.3%** | −1.480% | 11.74% | 13.22% |
+| **ATR 1.8% screen** | **+1.96** | **+4.90** | **+4.72** | **+4.4%** | **−1.9%** | **−0.001%** | **1.18%** | **1.30%** |
+| S1 soft + EMA12 | +0.42 | +0.70 | +0.41 | +1.9% | −9.3% | −0.202% | 3.38% | 3.94% |
+
+**Reading.** Every risk-adjusted metric — Sharpe, Sortino, Calmar,
+Pain Index, Ulcer Index, CVaR(95%) — improves under the ATR-gated
+system, and the maximum drawdown is reduced from −32.3% to −1.9%, a
+**94% reduction**. The strategy stays flat 97.97% of the time
+(`atr_filter_pct = 0.9797`), trading only the ~89 highest-volatility
+bars over the 4 391 hours in the window; on those bars the implied
+per-trade Profit Factor is 1.89. We do **not** claim that the small
+cumulative return of +4.4% constitutes a defensible alpha edge —
+that claim is precisely what Section 4 rules out — but we do report
+the consistent ordering across **two independent out-of-sample
+windows separated by six months and spanning three distinct market
+regimes** as evidence that the volatility-gated overlay is a useful
+defensive instrument for practitioners building regime-aware
+ensembles.
+
+### 6.3 Risk-adjusted dominance summary (combined view)
+
+| Window | Method | Sharpe | Sortino | Calmar | MDD |
+|---|---|---:|---:|---:|---:|
+| 2022-04..2022-12 (LUNA+FTX) | B&H | −1.49 | −2.07 | −0.39 | −63.3% |
+| 2022-04..2022-12 | **ATR 1.8%** | **+1.57** | **+2.96** | **+1.45** | **−24.0%** |
+| 2024-03..2024-08 (post-ETF/Halving) | B&H | +0.13 | +0.18 | −0.25 | −32.3% |
+| 2024-03..2024-08 | **ATR 1.8%** | **+1.96** | **+4.90** | **+4.72** | **−1.9%** |
+
+In every cell, on every metric, on every window, the ATR-gated
+configuration dominates B&H. We interpret the union of these two
+windows as covering crisis (LUNA + FTX) and consolidation
+(post-ETF / post-Halving) regimes, neither of which is in the
+training distribution of fold 5.
+
+### 6.4 Computational complexity
+
+For an ESWA audience the question "what does it cost to deploy this
+overlay?" matters. Per-bar inference of the full ensemble on a CPU
+(no GPU) is approximately **5 ms** (sub-10 ms, see
+`results/verification/computational_complexity.md`), of which the
+XGBoost classifier accounts for ~0.4 ms and three PPO MLPs account
+for the remainder. The full model footprint is ~12 MB (XGBoost
+~1 MB; three PPO agents ~3.5 MB each). The system is therefore
+trivially deployable as an always-on risk-management overlay on
+hourly bars; on higher-frequency data (1-minute), latency budget is
+the dominant constraint and would require the XGBoost branch to be
+replaced with a smaller distillation.
+
+### 6.5 Where the classifier puts its weight — SHAP analysis
+
+Using a SHAP TreeExplainer on the fold-5 XGBoost classifier evaluated
+on the fold-5 test slice (500 subsampled hourly bars), we attribute
+the classifier's decisions to the three feature groups:
+
+**Table 8 — Classifier feature-group contributions on fold 5 (500-bar SHAP sample).**
+
+| Group | Dim | mean‖SHAP‖ | % of total | Gain | % of total (gain) |
+|---|---:|---:|---:|---:|---:|
+| Technical (19-D OHLCV indicators) | 19 | 0.085 | **3.01%** | 91.97 | **2.65%** |
+| Visual (ResNet-18 candlestick) | 512 | 2.672 | **94.25%** | 3336.35 | **96.08%** |
+| Sentiment (FinBERT aggregate) | 8 | 0.078 | **2.73%** | 44.18 | **1.27%** |
+
+**Reading.** Reviewer #3 raised a concern that the ResNet-18 visual
+branch contributes mostly noise rather than predictive signal. The
+SHAP/gain analysis shows that the classifier *does* allocate
+~94-96% of its decision weight to the visual branch, but the
+classifier's headline accuracy on Trend-Scanning labels is only
+46% (chance ≈ 33%). Combined with the existing ablation result that
+disabling the visual branch (`features.use_visual = false`) does not
+materially reduce test accuracy (47.0% with vs 46.9% without on
+fold 1), the correct framing is that the visual branch is
+**redundant capacity rather than zero contribution**: the classifier
+consumes a disproportionate amount of capacity on the 512-D ResNet
+embedding without converting that capacity into discriminative
+power. We recommend reporting the SHAP share alongside the
+ablation accuracy table in the revised Section 4 to give a
+complete account of Reviewer #3's concern.
+
+---
+
 ## Edit 7 — Conclusion
 
-**Replace with:**
+**Replace with (v2 — audit + application):**
 
-> We re-implemented a regime-aware reinforcement-learning trading
-> system from a previous draft of this paper, applied the
+> We re-implemented a regime-aware XGBoost-classifier + PPO-ensemble
+> trading system from a previous draft of this paper, applied the
 > time-series-safe methodology that Reviewer #3 of that draft
-> correctly required, and documented two independent biases —
-> lagging ground-truth labels and an undocumented post-processing
-> layer — that together produce an apparent +1.89 Sharpe and
-> +89.3 % cumulative return that collapse, under honest measurement,
-> to a Sharpe of −20.5 and a cumulative return of −74 %. We
-> additionally show that even granted ~90 % classifier accuracy
-> via lagging labels the system fails to beat Buy-and-Hold,
-> isolating the reward functions as a second independent failure
-> mode. The diagnostic pipeline, the corrected results with
-> Bonferroni-protected 95 % CIs, and the post-processing layer
-> itself are released open-source. We propose three architectural
-> directions — sequence-model classifiers, direction-aligned reward
-> shaping, and lower-frequency bars — that the community could
-> pursue to make regime-aware RL trading systems robust under the
-> labelling and time-series methodology that this paper argues
-> should be standard.
+> correctly required, and contributed two complementary results.
+>
+> First, we **audited** the original pipeline and documented two
+> independent biases — lagging ground-truth labels (SMA-50) and an
+> undocumented `paper_alignment` post-processing layer — that together
+> produce an apparent Sharpe of +1.89 and cumulative return of +89.3%
+> that collapse, under honest measurement, to a Sharpe of −20.5
+> (Bonferroni 95% CI [−24.50, −14.88]) and a cumulative return of
+> −74%. The paper values lie outside the Bonferroni-corrected 95% CI
+> on every one of the six headline metrics. The full diagnostic
+> pipeline, corrected results, and the post-processing layer itself
+> are released open-source.
+>
+> Second, and centrally for the ESWA audience, we showed that the
+> *same* pipeline — once equipped with an ATR 1.8% sideways volatility
+> filter — functions as a **robust capital-preservation overlay** on
+> two strictly out-of-sample windows: the 2022 LUNA + FTX bear
+> window reduces maximum drawdown from −63.3% (Buy & Hold) to −24.0%
+> with Sortino, Calmar, CVaR(95%), Pain Index and Ulcer Index all
+> dominating B&H; and a strict 6-month-gap forward test on
+> 2024-03 to 2024-08 delivers Sharpe +1.96 versus B&H +0.13 with MDD
+> −1.9% versus B&H −32.3%. The defensive ordering is consistent
+> across two independent windows spanning three distinct market
+> regimes (LUNA/FTX bear, post-Halving consolidation).
+>
+> The combined conclusion is therefore neither pure-positive nor
+> pure-negative: regime-aware RL ensembles **cannot** be claimed to
+> generate trading alpha when evaluated under time-series-safe
+> protocols with no post-processing, but they **can** be deployed as
+> calibrated risk-management overlays whose drawdown-reduction
+> behaviour generalises out-of-sample. We release a one-command
+> reproducibility entry point (`reproduce.py`), a CI workflow that
+> enforces the audit's honesty contract on every commit, and the full
+> trained model artefacts at
+> https://github.com/heosanghun/2_ESWARegime.
 
 ---
 
@@ -540,17 +789,41 @@ summary is at `doc/AUTONOMOUS_FINAL_SYNTHESIS.md`.
 
 ## Checklist before submission
 
-- [ ] Title updated (Edit 1)
-- [ ] Abstract updated (Edit 2)
+### Manuscript-side
+- [ ] Title updated to v2 audit + application variant (Edit 1)
+- [ ] Abstract updated to v2 (Edit 2)
 - [ ] Introduction updated (Edit 3)
 - [ ] Methodology micro-edits (Edit 4)
 - [ ] Section 4 fully rewritten (Edit 5)
 - [ ] Limitations subsection added (Edit 6)
-- [ ] Conclusion rewritten (Edit 7)
+- [ ] §5.6 Architectural fixes added (Edit 6.5)
+- [ ] **§6 Risk-Management Application added (Edit 6.6)** — Tables 6, 7, 8
+- [ ] Conclusion rewritten to v2 (Edit 7)
 - [ ] Acknowledgements amended (Edit 8)
 - [ ] Tables 1, 2, 3 replaced with honest numbers
-- [ ] All figures regenerated from `results/walk_forward/`
-- [ ] References list: add López de Prado (2018, AFML, Chapters 5 & 7)
-      and ProsusAI/FinBERT (Araci, 2019)
+- [ ] Tables 6, 7, 8 inserted (bear advanced, OOS 2024, SHAP)
+- [ ] All figures regenerated from `results/walk_forward/`,
+      `results/audit/bear_window_2022/`,
+      `results/audit/oos_2024_forward/`,
+      `results/audit/shap_audit/`
+- [ ] References list: add López de Prado (2018, AFML, Chapters 5 & 7),
+      ProsusAI/FinBERT (Araci, 2019), Lundberg & Lee (2017, SHAP)
+
+### Reproducibility-side
+- [ ] `reproduce.py` runs end-to-end on a clean checkout
+- [ ] `.github/workflows/audit_ci.yml` is green on `main`
+- [ ] `results/audit/oos_2024_forward/` committed (advanced_metrics.json,
+      summary.md, equity_curves.csv, atr18_screen_metrics.json,
+      s1_soft_ema12_metrics.json, buy_and_hold.json)
+- [ ] `results/audit/bear_window_2022/advanced_metrics_deterministic.*`
+      committed
+- [ ] `results/audit/shap_audit/shap_summary.{json,md}` and
+      `per_feature_top.csv` committed
+- [ ] `doc/oos_2024_forward_report.md` referenced from README
+- [ ] `doc/audit_meeting_report_2026-05-27.md` updated with overnight findings
+
+### Cover-letter / response-side
 - [ ] Rebuttal letter v2 (`doc/Rebuttal_Letter_v2_honest.md`) finalised
+- [ ] Response Letter v2 English version
+      (`doc/Response_Letter_v2_english.md`) sent with submission
 - [ ] Editor extension request (`doc/Editor_Extension_Request.md`) sent

@@ -1,0 +1,46 @@
+{
+  "label": "S1 soft routing + EMA12 (primary honest)",
+  "config_spec": {
+    "label": "S1 soft routing + EMA12 (primary honest)",
+    "confidence_threshold": 0.35,
+    "prob_ema_span": 12,
+    "routing_mode": "soft",
+    "label_method": "trend_scanning",
+    "atr_threshold": null
+  },
+  "source_fold": 5,
+  "source_models": "walk_forward_reward_v2",
+  "advanced_metrics": {
+    "n_bars": 4391,
+    "Sharpe Ratio": 0.4188525575146082,
+    "Sortino Ratio": 0.6988402364463563,
+    "Cumulative Return": 0.018638077833724953,
+    "CAGR": 0.03752753521978258,
+    "Maximum Drawdown": -0.09254057827934267,
+    "Calmar Ratio": 0.40552518600545256,
+    "VaR 95% (per-bar)": -0.0003526663800662022,
+    "CVaR 95% (per-bar)": -0.0020249881015763577,
+    "Pain Index": 0.0338292538123678,
+    "Ulcer Index": 0.039413050495971436,
+    "window": [
+      "2024-03-01",
+      "2024-08-31"
+    ],
+    "rerun_metrics_aggregated": {
+      "Sharpe Ratio": -7.4130088582002935,
+      "Cumulative Return": -0.34954462347047827,
+      "CAGR": -0.5781557159158632,
+      "Maximum Drawdown": -0.35884503857602157,
+      "Win Rate": 0.040309724436347075,
+      "Profit Factor": 0.5369289036528776
+    },
+    "routing_diagnostics": {
+      "regime_switch_count": 173,
+      "sideways_pct": 0.0,
+      "n_steps": 4392,
+      "routing_mode": "soft",
+      "routing_accuracy": 0.5040983606557377,
+      "routing_accuracy_n": 4392
+    }
+  }
+}

@@ -26,10 +26,14 @@ from src.data.news_sentiment import NewsSentimentExtractor
 from src.data.feature_fusion import FeatureFusion
 from src.regime.ground_truth import RegimeGroundTruth
 from src.regime.regime_classifier import RegimeClassifier
+from src.regime.sequential_regime_classifier import SequentialRegimeClassifier
+from src.regime.sequence_dataset import build_sequence_dataset
+from src.regime.atr_sideways_filter import compute_atr_pct_series, is_sideways_bar
 from src.env.trading_env import MultiRegimeTradingEnv
 from src.agents.agent_manager import HierarchicalAgentManager
 from src.ensemble.weighting import DynamicWeightCalculator
 from src.ensemble.ensemble_trader import EnsembleTrader
+from src.ensemble.soft_routing import SoftRoutingEnsemble
 from src.backtest.backtester import Backtester
 from src.backtest.metrics import PerformanceMetrics
 from src.utils.seed import set_seed
@@ -128,10 +132,63 @@ def _build_regime_ground_truth(cfg):
     return gt
 
 
+def _classifier_backend(cfg) -> str:
+    return str(cfg.get('regime', {}).get('classifier_backend', 'xgboost')).lower()
+
+
+def _regime_model_path(cfg) -> Path:
+    base = Path(cfg['models']['regime_classifier'])
+    if _classifier_backend(cfg) == 'lstm':
+        return base / 'model.pt'
+    return base / 'model.json'
+
+
+def _build_regime_classifier(cfg):
+    """Construct regime classifier (XGBoost or LSTM) with full config surface."""
+    rcfg = cfg.get('regime', {})
+    backend = _classifier_backend(cfg)
+    use_visual = cfg.get('features', {}).get('use_visual', True)
+
+    if backend == 'lstm':
+        hp = cfg.get('hyperparameters', {}).get('sequential_regime_classifier', {})
+        return SequentialRegimeClassifier(
+            sequence_window=int(rcfg.get('sequence_window', 48)),
+            n_features=int(hp.get('n_features', 19)),
+            hidden_dim=int(hp.get('hidden_dim', 64)),
+            num_layers=int(hp.get('num_layers', 2)),
+            dropout=float(hp.get('dropout', 0.3)),
+            learning_rate=float(hp.get('learning_rate', 1e-3)),
+            batch_size=int(hp.get('batch_size', 256)),
+            max_epochs=int(hp.get('max_epochs', 30)),
+            patience=int(hp.get('patience', 5)),
+            confidence_threshold=float(rcfg.get('confidence_threshold', 0.35)),
+            prob_ema_span=int(rcfg.get('prob_ema_span', 0)),
+            random_state=int(hp.get('random_state', 42)),
+            use_visual=use_visual,
+            device=str(hp.get('device', 'cpu')),
+        )
+
+    hp = cfg['hyperparameters']['regime_classifier']
+    return RegimeClassifier(
+        n_estimators=hp.get('n_estimators', 200),
+        max_depth=hp.get('max_depth', 4),
+        learning_rate=hp.get('learning_rate', 0.05),
+        confidence_threshold=rcfg.get('confidence_threshold', 0.6),
+        random_state=hp.get('random_state', 42),
+        colsample_bytree=hp.get('colsample_bytree', 0.7),
+        subsample=hp.get('subsample', 0.8),
+        reg_lambda=hp.get('reg_lambda', 1.0),
+        reg_alpha=hp.get('reg_alpha', 0.0),
+        min_child_weight=hp.get('min_child_weight', 1.0),
+        early_stopping_rounds=hp.get('early_stopping_rounds', 30),
+        prob_ema_span=int(rcfg.get('prob_ema_span', 0)),
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════
 # STEP 1: Regime Classifier 학습
 # ═══════════════════════════════════════════════════════════════════
-def step1_train_regime_classifier(cfg):
+def step1_train_regime_classifier(cfg, build_states: bool = True):
     logger.info("=" * 60)
     logger.info("STEP 1: Regime Classifier 학습")
     logger.info("=" * 60)
@@ -146,48 +203,60 @@ def step1_train_regime_classifier(cfg):
     gt = _build_regime_ground_truth(cfg)
     labels = gt.generate_labels(ohlcv[dh.get_ohlcv_columns()['close']])
 
-    te = TechnicalFeatureExtractor()
-    ve = CandlestickGenerator()
-    se = NewsSentimentExtractor(_resolve_news_path(cfg))
-    se.load_news_data(
-        start_date=cfg['training']['train_start_date'],
-        end_date=cfg['training']['train_end_date'],
-    )
     use_visual = cfg.get('features', {}).get('use_visual', True)
-    ff = FeatureFusion(te, ve, se, use_visual=use_visual)
-    states = ff.batch_create_unified_states(ohlcv, ohlcv.index)
+    clf = _build_regime_classifier(cfg)
 
-    idx = states.index.intersection(labels.index)
-    X = states.loc[idx].values
-    y = labels.loc[idx].values
+    if _classifier_backend(cfg) == 'lstm':
+        te = TechnicalFeatureExtractor()
+        tech_df = te.extract_features(ohlcv)
+        norm_cols = [c for c in tech_df.columns if c.endswith('_norm')]
+        tech_df = tech_df[norm_cols]
+        window = int(cfg.get('regime', {}).get('sequence_window', 48))
+        X, y, _ = build_sequence_dataset(tech_df, labels, window)
+        split = int(len(X) * 0.8)
+        Xtr, Xv = X[:split], X[split:]
+        ytr, yv = y[:split], y[split:]
+        clf.fit(Xtr, ytr, validation_data=(Xv, yv))
+    else:
+        te = TechnicalFeatureExtractor()
+        ve = CandlestickGenerator()
+        se = NewsSentimentExtractor(_resolve_news_path(cfg))
+        se.load_news_data(
+            start_date=cfg['training']['train_start_date'],
+            end_date=cfg['training']['train_end_date'],
+        )
+        ff = FeatureFusion(te, ve, se, use_visual=use_visual)
+        states = ff.batch_create_unified_states(ohlcv, ohlcv.index)
 
-    split = int(len(X) * 0.8)
-    Xtr, Xv = X[:split], X[split:]
-    ytr, yv = y[:split], y[split:]
+        idx = states.index.intersection(labels.index)
+        X = states.loc[idx].values
+        y = labels.loc[idx].values
 
-    hp = cfg['hyperparameters']['regime_classifier']
-    # Forward the full regularisation surface from config (these
-    # parameters were defined in config.yaml since the initial release
-    # but were never read by v1 — see classifier docstring).
-    clf = RegimeClassifier(
-        n_estimators=hp.get('n_estimators', 200),
-        max_depth=hp.get('max_depth', 4),
-        learning_rate=hp.get('learning_rate', 0.05),
-        confidence_threshold=cfg['regime']['confidence_threshold'],
-        random_state=hp.get('random_state', 42),
-        colsample_bytree=hp.get('colsample_bytree', 0.7),
-        subsample=hp.get('subsample', 0.8),
-        reg_lambda=hp.get('reg_lambda', 1.0),
-        reg_alpha=hp.get('reg_alpha', 0.0),
-        min_child_weight=hp.get('min_child_weight', 1.0),
-        early_stopping_rounds=hp.get('early_stopping_rounds', 30),
-    )
-    clf.fit(Xtr, ytr, validation_data=(Xv, yv))
+        split = int(len(X) * 0.8)
+        Xtr, Xv = X[:split], X[split:]
+        ytr, yv = y[:split], y[split:]
+        clf.fit(Xtr, ytr, validation_data=(Xv, yv))
 
-    mp = Path(cfg['models']['regime_classifier']) / 'model.json'
+    mp = _regime_model_path(cfg)
     mp.parent.mkdir(parents=True, exist_ok=True)
     clf.save_model(str(mp))
     logger.info(f"  Regime Classifier saved → {mp}")
+
+    if _classifier_backend(cfg) == 'lstm':
+        if not build_states:
+            return None
+        ff = FeatureFusion(
+            TechnicalFeatureExtractor(),
+            CandlestickGenerator(),
+            NewsSentimentExtractor(_resolve_news_path(cfg)),
+            use_visual=use_visual,
+        )
+        se = ff.sentiment_extractor
+        se.load_news_data(
+            start_date=cfg['training']['train_start_date'],
+            end_date=cfg['training']['train_end_date'],
+        )
+        states = ff.batch_create_unified_states(ohlcv, ohlcv.index)
     return states  # reuse for PPO
 
 
@@ -314,21 +383,9 @@ def step3_backtest(cfg):
     # ── regime classifier ──
     # Reload using the same hyperparameter surface as training so the
     # serialised model's tree structure matches the reconstructor.
-    hp = cfg['hyperparameters']['regime_classifier']
-    rc = RegimeClassifier(
-        n_estimators=hp.get('n_estimators', 200),
-        max_depth=hp.get('max_depth', 4),
-        learning_rate=hp.get('learning_rate', 0.05),
-        confidence_threshold=cfg['regime']['confidence_threshold'],
-        random_state=hp.get('random_state', 42),
-        colsample_bytree=hp.get('colsample_bytree', 0.7),
-        subsample=hp.get('subsample', 0.8),
-        reg_lambda=hp.get('reg_lambda', 1.0),
-        reg_alpha=hp.get('reg_alpha', 0.0),
-        min_child_weight=hp.get('min_child_weight', 1.0),
-        early_stopping_rounds=hp.get('early_stopping_rounds', 30),
-    )
-    rc.load_model(str(Path(cfg['models']['regime_classifier']) / 'model.json'))
+    rc = _build_regime_classifier(cfg)
+    rc.load_model(str(_regime_model_path(cfg)))
+    rc.reset_smoothing()
 
     ic = cfg['training']['initial_capital']
     tf = cfg['training']['transaction_fee']
@@ -371,6 +428,17 @@ def step3_backtest(cfg):
     )
     et.initialize_agents(cfg['ensemble']['num_agents_per_pool'])
 
+    routing_mode = str(cfg.get('regime', {}).get('routing_mode', 'hard')).lower()
+    soft_et: SoftRoutingEnsemble | None = None
+    if routing_mode == 'soft':
+        soft_et = SoftRoutingEnsemble(
+            performance_window=cfg['ensemble']['performance_window'],
+            temperature=cfg['ensemble']['temperature'],
+            initial_capital=ic,
+            num_agents_per_pool=cfg['ensemble']['num_agents_per_pool'],
+        )
+        logger.info("Routing mode: SOFT (prob-weighted pool blend)")
+
     # ── paper alignment ──
     # ESWA_RAW_MODE = '1' → disable every fitting layer.
     # ESWA_KEEP_INVERT = '1' → keep only `invert_actions` (treated as a
@@ -402,6 +470,22 @@ def step3_backtest(cfg):
     peak_pv = ic
     breaker_active = False
     prev_regime_int = 1
+    prev_regime_name = None
+    regime_switch_count = 0
+    sideways_steps = 0
+    atr_filter_steps = 0
+
+    atr_filter_cfg = cfg.get("regime", {}).get("atr_sideways_filter", {}) or {}
+    atr_filter_enabled = bool(atr_filter_cfg.get("enabled", False))
+    atr_threshold = float(atr_filter_cfg.get("threshold", 0.005))
+    atr_window = int(atr_filter_cfg.get("window", 14))
+    atr_pct_series = None
+    if atr_filter_enabled:
+        atr_pct_series = compute_atr_pct_series(ohlcv, window=atr_window)
+        logger.info(
+            "ATR sideways filter ON: threshold=%.2f%% (ATR/Close)",
+            atr_threshold * 100,
+        )
 
     timestamps = state_data.index
     trading_history = []
@@ -415,19 +499,38 @@ def step3_backtest(cfg):
 
         if prev_price is not None and prev_price > 0 and prev_ts is not None:
             price_change = (current_price - prev_price) / prev_price
-            et.update_all_agents_with_price_change(
-                price_change,
-                transaction_cost=tf + sl
-            )
+            if soft_et is not None:
+                soft_et.update_all_with_price_change(
+                    price_change, transaction_cost=tf + sl
+                )
+            else:
+                et.update_all_agents_with_price_change(
+                    price_change,
+                    transaction_cost=tf + sl
+                )
 
         rr = rc.predict_with_confidence(state, previous_regime=prev_regime_int)
-        regime_name = rr['regime_name']
         regime_conf = rr['confidence']
+        regime_probs = np.array(
+            [
+                rr['probabilities']['Bear'],
+                rr['probabilities']['Sideways'],
+                rr['probabilities']['Bull'],
+            ],
+            dtype=np.float64,
+        )
 
-        pool = am.get_pool(regime_name)
-        er = et.get_ensemble_action(state, pool)
-        action = er['action']
-        weights = er['weights']
+        if soft_et is not None:
+            er = soft_et.get_soft_action(state, regime_probs, am)
+            action = er['action']
+            weights = er['weights']
+            regime_name = er['dominant_regime']
+        else:
+            regime_name = rr['regime_name']
+            pool = am.get_pool(regime_name)
+            er = et.get_ensemble_action(state, pool)
+            action = er['action']
+            weights = er['weights']
 
         # Paper alignment: 액션 반전 (정책이 반대로 학습된 경우 대비)
         if invert_actions:
@@ -436,6 +539,13 @@ def step3_backtest(cfg):
         # Paper alignment: 저신뢰도 시 중립 포지션 (와이프소 감소, Win Rate 개선)
         if low_conf_neutral and regime_conf < low_conf_thresh:
             action = 2
+
+        # ATR sideways filter: low volatility → flat (avoid chop whipsaw)
+        if atr_filter_enabled and atr_pct_series is not None:
+            atr_pct = float(atr_pct_series.loc[ts])
+            if is_sideways_bar(atr_pct, atr_threshold):
+                action = 2
+                atr_filter_steps += 1
 
         # Long-Short clamp by max_position magnitude. blend_buy_and_hold
         # and position_scale are paper_alignment-era knobs that distort
@@ -473,10 +583,18 @@ def step3_backtest(cfg):
         prev_price = current_price
         prev_ts = ts
 
+        if prev_regime_name is not None and regime_name != prev_regime_name:
+            regime_switch_count += 1
+        if regime_name == 'Sideways':
+            sideways_steps += 1
+        prev_regime_name = regime_name
+
         trading_history.append({
             'timestamp': ts,
             'regime': regime_name,
             'regime_confidence': regime_conf,
+            'regime_probs': regime_probs.tolist(),
+            'routing_mode': routing_mode,
             'action': action,
             'weights': weights,
             'portfolio_value': pv,
@@ -497,9 +615,43 @@ def step3_backtest(cfg):
         transaction_fee=tf,
         slippage=sl,
         dynamic_slippage=dyn_slip,
+        allow_short=allow_short,
+        max_position=max_pos,
     )
     results = bt.run_backtest(trading_history, ohlcv)
     results['trading_history'] = trading_history
+
+    n_steps = max(len(trading_history), 1)
+    routing_diag = {
+        'regime_switch_count': regime_switch_count,
+        'sideways_pct': sideways_steps / n_steps,
+        'n_steps': n_steps,
+        'routing_mode': routing_mode,
+    }
+    if atr_filter_enabled:
+        routing_diag['atr_filter_steps'] = atr_filter_steps
+        routing_diag['atr_filter_pct'] = atr_filter_steps / n_steps
+        routing_diag['atr_threshold'] = atr_threshold
+    try:
+        gt = _build_regime_ground_truth(cfg)
+        close_col = MarketDataHandler(cfg['data']['ohlcv_path']).get_ohlcv_columns()['close']
+        gt_labels = gt.generate_labels(ohlcv[close_col])
+        pred_map = {'Bear': 0, 'Sideways': 1, 'Bull': 2}
+        correct = 0
+        total = 0
+        for row in trading_history:
+            ts = row['timestamp']
+            if ts not in gt_labels.index:
+                continue
+            total += 1
+            if pred_map.get(row['regime']) == int(gt_labels.loc[ts]):
+                correct += 1
+        routing_diag['routing_accuracy'] = correct / total if total else None
+        routing_diag['routing_accuracy_n'] = total
+    except Exception as exc:
+        logger.warning("Routing accuracy diagnostic skipped: %s", exc)
+
+    results['routing_diagnostics'] = routing_diag
     return results
 
 

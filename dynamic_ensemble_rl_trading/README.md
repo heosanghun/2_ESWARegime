@@ -2,7 +2,11 @@
 
 **Repository:** https://github.com/heosanghun/2_ESWARegime
 
-A robust hierarchical ensemble framework for responding to market regime changes in financial trading, implementing the paper **"A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes"**.
+> **ESWA reviewers:** start at [`doc/REVIEWER_INDEX.md`](doc/REVIEWER_INDEX.md), then run `python reproduce.py`.
+
+A robust hierarchical ensemble framework for responding to market regime changes in financial trading, implementing the paper **"A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes"** (ESWA-D-26-08980).
+
+This public repository supports an **audit + risk-management application** revision: we disclose that originally reported Table 2 metrics are not reproducible under honest methodology, and we provide reproducible evidence for the **ATR 1.8% volatility-gated capital-preservation overlay** on two out-of-sample windows (2022 bear + 2024 forward test).
 
 ---
 
@@ -15,10 +19,9 @@ A robust hierarchical ensemble framework for responding to market regime changes
 > 하는 과정에서 이 사실을 발견하여, 후처리 계층을 비활성화한 정직한 측정
 > 으로 모든 결과를 재산출했습니다.
 >
-> **정직한 측정 결과**는 `doc/AUTONOMOUS_OVERNIGHT_REPORT.md`,
-> `results/walk_forward/summary.md`,
-> `results/walk_forward/statistical_tests.md`,
-> `results/walk_forward/table1_classifier_per_fold.md` 에 보존되어 있습니다.
+> **정직한 측정 결과**는 `doc/REVIEWER_INDEX.md`,
+> `results/audit/`, `doc/AUTONOMOUS_OVERNIGHT_REPORT.md`,
+> `results/walk_forward/summary.md` 에 보존되어 있습니다.
 > 후처리 계층의 코드 위치 또한 `config/config.yaml` 의 `paper_alignment`
 > 섹션과 `scripts/train_and_verify.py` 의 `--raw-metrics` 분기에서 직접
 > 확인할 수 있습니다.
@@ -104,15 +107,29 @@ This system implements a four-layer hierarchical architecture that adapts to mar
 3. **PPO Reinforcement Learning Layer**: Three pools of 5 PPO agents each, regime-specific reward functions.
 4. **Ensemble Decision Layer**: Dynamic weighting (30-day Sharpe, temperature T = 10), policy aggregation.
 
+## One-command reproduction (Reviewer #4)
+
+```bash
+python reproduce.py              # Bootstrap CIs + 2022 bear + OOS 2024
+python reproduce.py --only ci    # Statistical tests only
+python reproduce.py --only bear  # 2022 bear advanced metrics
+python reproduce.py --only oos --download-data   # OOS 2024 forward test
+```
+
+See [`doc/Response_Letter_v2_english.md`](doc/Response_Letter_v2_english.md) and [`doc/REVIEWER_INDEX.md`](doc/REVIEWER_INDEX.md).
+
+---
+
 ## Key Features
 
 - Walk-Forward Expanding Window Cross-Validation
-- Backtesting with transaction costs (0.05% fee, 0.02% slippage)
-- Paper alignment options for Table 2 metric comparison
+- Backtesting with transaction costs (0.05% fee, ATR-scaled slippage)
+- **`paper_alignment` post-processing disabled by default** (`ESWA_RAW_MODE=1`); layer retained for audit only
+- ATR 1.8% sideways volatility filter (`src/regime/atr_sideways_filter.py`)
 
 ## ESWA-D-26-08980 — 18개 리뷰어 항목 전수 대응
 
-본 저장소는 ESWA Major Revision의 18개 리뷰어 지적을 **모두** 코드 또는 문서 산출물로 대응했습니다. 자세한 매핑은 `doc/ESWA_18항목_최종정리표.md` 와 `doc/Rebuttal_Letter_draft.md` 를 참고하세요.
+본 저장소는 ESWA Major Revision의 18개 리뷰어 지적을 코드 또는 문서 산출물로 대응했습니다. 매핑은 `doc/ESWA_18항목_최종정리표.md` 와 `doc/Response_Letter_v2_english.md` 를 참고하세요.
 
 ### 핵심 신규 모듈
 
@@ -153,12 +170,15 @@ python scripts/run_ablation_no_news.py
 | `results/verification/statistical_tests.md` | Bootstrap CI + Ledoit-Wolf + Bonferroni |
 | `results/verification/computational_complexity.md` | CPU latency / RSS memory / 모델 크기 |
 | `results/verification/ablation_no_news.md` | 뉴스 제외 시 metrics Δ |
-| `results/verification/metrics_vs_paper.json` | 논문 Table 2 vs 실제 |
-| `doc/Rebuttal_Letter_draft.md` | 18개 항목 전수 응답 + 인용 거절문 |
-| `doc/Reproducibility_Statement.md` | 데이터/시드/환경/명령 일체 |
-| `doc/manuscript_revisions/*.md` | 본문 보강 자료 13개 문서 (수식, Limitation, Practical Implications, Notation, Related Work, Figure brief) |
-| `doc/ESWA_18항목_최종정리표.md` | 18개 항목 ↔ 산출물 한눈 매핑 |
-| `doc/ESWA_Reviewer3_개발계획서.md` | 개발 계획서 |
+| `results/audit/` | Headline audit JSON/MD (CI, bear 2022, OOS 2024, SHAP) |
+| `doc/Response_Letter_v2_english.md` | Reviewer responses + §0 disclosure |
+| `doc/Reproducibility_Statement.md` | Data / seed / environment / commands |
+| `doc/REVIEWER_INDEX.md` | Reviewer navigation (start here) |
+| `doc/gap_decomposition_refined.md` | Paper vs honest gap by bias source |
+| `doc/oos_2024_forward_report.md` | OOS 2024 forward-test report |
+| `doc/audit_paper_alignment_timeline.md` | `paper_alignment` timeline |
+| `doc/Manuscript_Revision_Guide.md` | Paste-ready revised manuscript sections |
+| `doc/ESWA_18항목_최종정리표.md` | 18 reviewer items ↔ artefacts |
 
 ## Requirements
 

@@ -30,7 +30,7 @@ class RegimeGroundTruth:
         Window size for SMA (used when method='sma').
     bull_threshold / bear_threshold : float
         Slope thresholds for the SMA method.
-    method : {'sma', 'trend_scanning'}
+    method : {'sma', 'trend_scanning', 'causal_trend_scanning'}
         Label generation method.
     trend_horizon_min, trend_horizon_max : int
         Horizon range scanned when method='trend_scanning'.
@@ -69,10 +69,10 @@ class RegimeGroundTruth:
         self.trend_horizon_min = int(trend_horizon_min)
         self.trend_horizon_max = int(trend_horizon_max)
         self.trend_t_threshold = float(trend_t_threshold)
-        if self.method not in ("sma", "trend_scanning"):
+        if self.method not in ("sma", "trend_scanning", "causal_trend_scanning"):
             raise ValueError(
                 f"Unknown regime labeling method: {self.method}. "
-                "Choose 'sma' or 'trend_scanning'."
+                "Choose 'sma', 'trend_scanning', or 'causal_trend_scanning'."
             )
     
     def calculate_sma_slope(
@@ -133,7 +133,7 @@ class RegimeGroundTruth:
             "Generating regime labels (method=%s)", self.method
         )
 
-        if self.method == "trend_scanning":
+        if self.method in ("trend_scanning", "causal_trend_scanning"):
             from .trend_scanning import TrendScanningLabeler
 
             labeler = TrendScanningLabeler(
@@ -141,10 +141,12 @@ class RegimeGroundTruth:
                 horizon_max=self.trend_horizon_max,
                 t_threshold=self.trend_t_threshold,
             )
-            labels = labeler.generate_labels(price_data)
+            direction = "backward" if self.method == "causal_trend_scanning" else "forward"
+            labels = labeler.generate_labels(price_data, direction=direction)
             label_counts = labels.value_counts().sort_index()
             logger.info(
-                "TrendScanning label distribution: %s",
+                "%s label distribution: %s",
+                "CausalTrendScanning" if direction == "backward" else "TrendScanning",
                 dict(label_counts),
             )
             return labels

@@ -1,0 +1,387 @@
+{
+  "window": [
+    "2022-04-19",
+    "2022-12-19"
+  ],
+  "folds_used": [
+    1,
+    2
+  ],
+  "honest_mode": true,
+  "buy_and_hold": {
+    "window": [
+      "2022-04-19",
+      "2022-12-19"
+    ],
+    "n_bars": 5879,
+    "Sharpe Ratio": -1.7596839650213172,
+    "Cumulative Return": -0.5978825262427658,
+    "Maximum Drawdown": -0.6334406108729769,
+    "Max consecutive loss days": 8
+  },
+  "configurations": {
+    "v1_baseline": {
+      "label": "v1 baseline (worst case reference)",
+      "subdir": "walk_forward",
+      "fold_test_windows": [
+        {
+          "fold": 1,
+          "test_start": "2022-04-19",
+          "test_end": "2022-08-19"
+        },
+        {
+          "fold": 2,
+          "test_start": "2022-08-19",
+          "test_end": "2022-12-19"
+        }
+      ],
+      "fold_raw": [
+        {
+          "fold": 1,
+          "train_start": "2021-10-12",
+          "train_end": "2022-04-19",
+          "test_start": "2022-04-19",
+          "test_end": "2022-08-19",
+          "elapsed_min": 16.45795238018036,
+          "avg_consistency_pct": 6.216666666666666,
+          "metrics": {
+            "Sharpe Ratio": -12.824713876659006,
+            "Cumulative Return": -0.8488884202377438,
+            "CAGR": -0.9966685580880477,
+            "Maximum Drawdown": -0.8488884202377438,
+            "Win Rate": 0.11103518961393918,
+            "Profit Factor": 0.48953899039653226
+          }
+        },
+        {
+          "fold": 2,
+          "train_start": "2021-10-12",
+          "train_end": "2022-08-19",
+          "test_start": "2022-08-19",
+          "test_end": "2022-12-19",
+          "elapsed_min": 17.29557423591614,
+          "avg_consistency_pct": 4.05,
+          "metrics": {
+            "Sharpe Ratio": -22.844101806847917,
+            "Cumulative Return": -0.9016036993605001,
+            "CAGR": -0.9990875465639947,
+            "Maximum Drawdown": -0.9016036993605001,
+            "Win Rate": 0.08438674410659378,
+            "Profit Factor": 0.27933590806289504
+          }
+        }
+      ],
+      "metrics": {
+        "Sharpe Ratio": {
+          "fold_1": -12.824713876659006,
+          "fold_2": -22.844101806847917,
+          "mean": -17.83440784175346,
+          "min": -22.844101806847917,
+          "max": -12.824713876659006
+        },
+        "Cumulative Return": {
+          "fold_1": -0.8488884202377438,
+          "fold_2": -0.9016036993605001,
+          "mean": -0.875246059799122,
+          "min": -0.9016036993605001,
+          "max": -0.8488884202377438
+        },
+        "CAGR": {
+          "fold_1": -0.9966685580880477,
+          "fold_2": -0.9990875465639947,
+          "mean": -0.9978780523260211,
+          "min": -0.9990875465639947,
+          "max": -0.9966685580880477
+        },
+        "Maximum Drawdown": {
+          "fold_1": -0.8488884202377438,
+          "fold_2": -0.9016036993605001,
+          "mean": -0.875246059799122,
+          "min": -0.9016036993605001,
+          "max": -0.8488884202377438
+        },
+        "Win Rate": {
+          "fold_1": 0.11103518961393918,
+          "fold_2": 0.08438674410659378,
+          "mean": 0.09771096686026648,
+          "min": 0.08438674410659378,
+          "max": 0.11103518961393918
+        },
+        "Profit Factor": {
+          "fold_1": 0.48953899039653226,
+          "fold_2": 0.27933590806289504,
+          "mean": 0.3844374492297137,
+          "min": 0.27933590806289504,
+          "max": 0.48953899039653226
+        }
+      }
+    },
+    "s1_soft_ema12": {
+      "label": "S1 soft routing + EMA12 (primary honest)",
+      "subdir": "routing_ablation/phase2_soft/S1_soft_ema12",
+      "fold_test_windows": [
+        {
+          "fold": 1,
+          "test_start": "2022-04-19",
+          "test_end": "2022-08-19"
+        },
+        {
+          "fold": 2,
+          "test_start": "2022-08-19",
+          "test_end": "2022-12-19"
+        }
+      ],
+      "fold_raw": [
+        {
+          "fold": 1,
+          "train_start": "2021-10-12",
+          "train_end": "2022-04-19",
+          "test_start": "2022-04-19",
+          "test_end": "2022-08-19",
+          "elapsed_min": 2.139393965403239,
+          "avg_consistency_pct": 15.216666666666667,
+          "metrics": {
+            "Sharpe Ratio": -11.578210004308422,
+            "Cumulative Return": -0.9101170129754369,
+            "CAGR": -0.999305653773416,
+            "Maximum Drawdown": -0.9140045786252301,
+            "Win Rate": 0.4294499487529894,
+            "Profit Factor": 0.6562218182324435
+          },
+          "rebacktest_only": true,
+          "backtester_long_short_fix": "2026-05-19",
+          "model_subdir": "walk_forward_reward_v2",
+          "confidence_threshold": 0.35,
+          "prob_ema_span": 12,
+          "routing_mode": "soft",
+          "routing_diagnostics": {
+            "regime_switch_count": 145,
+            "sideways_pct": 0.001366120218579235,
+            "n_steps": 2928,
+            "routing_mode": "soft",
+            "routing_accuracy": 0.4456967213114754,
+            "routing_accuracy_n": 2928
+          }
+        },
+        {
+          "fold": 2,
+          "train_start": "2021-10-12",
+          "train_end": "2022-08-19",
+          "test_start": "2022-08-19",
+          "test_end": "2022-12-19",
+          "elapsed_min": 2.2432966828346252,
+          "avg_consistency_pct": 14.25,
+          "metrics": {
+            "Sharpe Ratio": -10.906068225488914,
+            "Cumulative Return": -0.8288189300599365,
+            "CAGR": -0.9951458489398417,
+            "Maximum Drawdown": -0.8411431560922809,
+            "Win Rate": 0.387769046805603,
+            "Profit Factor": 0.6629689148535484
+          },
+          "rebacktest_only": true,
+          "backtester_long_short_fix": "2026-05-19",
+          "model_subdir": "walk_forward_reward_v2",
+          "confidence_threshold": 0.35,
+          "prob_ema_span": 12,
+          "routing_mode": "soft",
+          "routing_diagnostics": {
+            "regime_switch_count": 172,
+            "sideways_pct": 0.0,
+            "n_steps": 2928,
+            "routing_mode": "soft",
+            "routing_accuracy": 0.4989754098360656,
+            "routing_accuracy_n": 2928
+          }
+        }
+      ],
+      "metrics": {
+        "Sharpe Ratio": {
+          "fold_1": -11.578210004308422,
+          "fold_2": -10.906068225488914,
+          "mean": -11.242139114898668,
+          "min": -11.578210004308422,
+          "max": -10.906068225488914
+        },
+        "Cumulative Return": {
+          "fold_1": -0.9101170129754369,
+          "fold_2": -0.8288189300599365,
+          "mean": -0.8694679715176867,
+          "min": -0.9101170129754369,
+          "max": -0.8288189300599365
+        },
+        "CAGR": {
+          "fold_1": -0.999305653773416,
+          "fold_2": -0.9951458489398417,
+          "mean": -0.9972257513566288,
+          "min": -0.999305653773416,
+          "max": -0.9951458489398417
+        },
+        "Maximum Drawdown": {
+          "fold_1": -0.9140045786252301,
+          "fold_2": -0.8411431560922809,
+          "mean": -0.8775738673587554,
+          "min": -0.9140045786252301,
+          "max": -0.8411431560922809
+        },
+        "Win Rate": {
+          "fold_1": 0.4294499487529894,
+          "fold_2": 0.387769046805603,
+          "mean": 0.4086094977792962,
+          "min": 0.387769046805603,
+          "max": 0.4294499487529894
+        },
+        "Profit Factor": {
+          "fold_1": 0.6562218182324435,
+          "fold_2": 0.6629689148535484,
+          "mean": 0.6595953665429959,
+          "min": 0.6562218182324435,
+          "max": 0.6629689148535484
+        }
+      }
+    },
+    "atr18_screen": {
+      "label": "ATR 1.8% sideways filter (best honest)",
+      "subdir": "autonomous/screen_extra_18",
+      "fold_test_windows": [
+        {
+          "fold": 1,
+          "test_start": "2022-04-19",
+          "test_end": "2022-08-19"
+        },
+        {
+          "fold": 2,
+          "test_start": "2022-08-19",
+          "test_end": "2022-12-19"
+        }
+      ],
+      "fold_raw": [
+        {
+          "fold": 1,
+          "train_start": "2021-10-12",
+          "train_end": "2022-04-19",
+          "test_start": "2022-04-19",
+          "test_end": "2022-08-19",
+          "elapsed_min": 3.3280120452245074,
+          "avg_consistency_pct": 6.25,
+          "metrics": {
+            "Sharpe Ratio": -3.3027244080746248,
+            "Cumulative Return": -0.3743176062744954,
+            "CAGR": -0.7571852883645124,
+            "Maximum Drawdown": -0.3773835114887417,
+            "Win Rate": 0.044072429108302016,
+            "Profit Factor": 0.7251904708933684
+          },
+          "rebacktest_only": true,
+          "backtester_long_short_fix": "2026-05-19",
+          "model_subdir": "walk_forward_reward_v2",
+          "classifier_subdir": "walk_forward_reward_v2",
+          "confidence_threshold": 0.35,
+          "prob_ema_span": 12,
+          "routing_mode": "soft",
+          "label_method": "trend_scanning",
+          "atr_sideways_filter": {
+            "enabled": true,
+            "threshold": 0.018
+          },
+          "routing_diagnostics": {
+            "regime_switch_count": 145,
+            "sideways_pct": 0.001366120218579235,
+            "n_steps": 2928,
+            "routing_mode": "soft",
+            "atr_filter_steps": 2632,
+            "atr_filter_pct": 0.8989071038251366,
+            "atr_threshold": 0.018,
+            "routing_accuracy": 0.4456967213114754,
+            "routing_accuracy_n": 2928
+          }
+        },
+        {
+          "fold": 2,
+          "train_start": "2021-10-12",
+          "train_end": "2022-08-19",
+          "test_start": "2022-08-19",
+          "test_end": "2022-12-19",
+          "elapsed_min": 3.462484554449717,
+          "avg_consistency_pct": 16.5,
+          "metrics": {
+            "Sharpe Ratio": -1.3169172746936253,
+            "Cumulative Return": -0.07595884652241057,
+            "CAGR": -0.21216373271056044,
+            "Maximum Drawdown": -0.10288287582967419,
+            "Win Rate": 0.01093269559275709,
+            "Profit Factor": 0.794237074959148
+          },
+          "rebacktest_only": true,
+          "backtester_long_short_fix": "2026-05-19",
+          "model_subdir": "walk_forward_reward_v2",
+          "classifier_subdir": "walk_forward_reward_v2",
+          "confidence_threshold": 0.35,
+          "prob_ema_span": 12,
+          "routing_mode": "soft",
+          "label_method": "trend_scanning",
+          "atr_sideways_filter": {
+            "enabled": true,
+            "threshold": 0.018
+          },
+          "routing_diagnostics": {
+            "regime_switch_count": 172,
+            "sideways_pct": 0.0,
+            "n_steps": 2928,
+            "routing_mode": "soft",
+            "atr_filter_steps": 2831,
+            "atr_filter_pct": 0.9668715846994536,
+            "atr_threshold": 0.018,
+            "routing_accuracy": 0.4989754098360656,
+            "routing_accuracy_n": 2928
+          }
+        }
+      ],
+      "metrics": {
+        "Sharpe Ratio": {
+          "fold_1": -3.3027244080746248,
+          "fold_2": -1.3169172746936253,
+          "mean": -2.3098208413841252,
+          "min": -3.3027244080746248,
+          "max": -1.3169172746936253
+        },
+        "Cumulative Return": {
+          "fold_1": -0.3743176062744954,
+          "fold_2": -0.07595884652241057,
+          "mean": -0.225138226398453,
+          "min": -0.3743176062744954,
+          "max": -0.07595884652241057
+        },
+        "CAGR": {
+          "fold_1": -0.7571852883645124,
+          "fold_2": -0.21216373271056044,
+          "mean": -0.4846745105375364,
+          "min": -0.7571852883645124,
+          "max": -0.21216373271056044
+        },
+        "Maximum Drawdown": {
+          "fold_1": -0.3773835114887417,
+          "fold_2": -0.10288287582967419,
+          "mean": -0.24013319365920796,
+          "min": -0.3773835114887417,
+          "max": -0.10288287582967419
+        },
+        "Win Rate": {
+          "fold_1": 0.044072429108302016,
+          "fold_2": 0.01093269559275709,
+          "mean": 0.02750256235052955,
+          "min": 0.01093269559275709,
+          "max": 0.044072429108302016
+        },
+        "Profit Factor": {
+          "fold_1": 0.7251904708933684,
+          "fold_2": 0.794237074959148,
+          "mean": 0.7597137729262582,
+          "min": 0.7251904708933684,
+          "max": 0.794237074959148
+        }
+      }
+    }
+  },
+  "generated": "2026-05-26T17:56:13"
+}

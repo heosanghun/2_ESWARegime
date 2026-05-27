@@ -23,8 +23,11 @@ logger = logging.getLogger(__name__)
 
 class Backtester:
 
-    # Long-only weight map (same as trading_env)
-    WEIGHT_MAP = {0: 0.0, 1: 0.25, 2: 0.50, 3: 0.75, 4: 1.0}
+    # Must match MultiRegimeTradingEnv (src/env/trading_env.py).
+    LONG_SHORT_WEIGHT_MAP = {0: -1.0, 1: -0.5, 2: 0.0, 3: 0.5, 4: 1.0}
+    LONG_ONLY_WEIGHT_MAP = {0: 0.0, 1: 0.25, 2: 0.50, 3: 0.75, 4: 1.0}
+    # Legacy alias kept for callers that still reference Backtester.WEIGHT_MAP.
+    WEIGHT_MAP = LONG_ONLY_WEIGHT_MAP
 
     def __init__(
         self,
@@ -32,6 +35,8 @@ class Backtester:
         transaction_fee: float = 0.0005,
         slippage: float = 0.0002,
         dynamic_slippage: Optional[pd.Series] = None,
+        allow_short: bool = True,
+        max_position: float = 1.0,
     ):
         self.initial_capital = initial_capital
         self.transaction_fee = transaction_fee
@@ -40,6 +45,15 @@ class Backtester:
         # slippage rates (e.g. produced by ATRSlippageModel). When set,
         # it overrides the scalar `slippage` argument.
         self.dynamic_slippage = dynamic_slippage
+        self.allow_short = allow_short
+        self.max_position = max_position
+        self.weight_map = (
+            dict(self.LONG_SHORT_WEIGHT_MAP)
+            if allow_short
+            else dict(self.LONG_ONLY_WEIGHT_MAP)
+        )
+        # Unknown discrete action fallback (avoid long bias in long-short mode).
+        self._default_weight = 0.0 if allow_short else 0.5
         self.metrics_calculator = PerformanceMetrics()
 
     # ------------------------------------------------------------------
@@ -78,14 +92,18 @@ class Backtester:
         n = len(prices)
 
         # ── convert actions → weights (effective_weight 우선) ──
+        lo, hi = (-self.max_position, self.max_position) if self.allow_short else (0.0, self.max_position)
         if any(w is not None for w in eff_weights):
             weights = np.array([
-                w if w is not None else self.WEIGHT_MAP.get(a, 0.5)
+                w if w is not None else self.weight_map.get(a, self._default_weight)
                 for w, a in zip(eff_weights, actions)
-            ])
-            weights = np.clip(weights, 0.0, 3.0)
+            ], dtype=float)
+            weights = np.clip(weights, lo, hi)
         else:
-            weights = np.array([self.WEIGHT_MAP.get(a, 0.5) for a in actions])
+            weights = np.array([
+                self.weight_map.get(a, self._default_weight) for a in actions
+            ], dtype=float)
+            weights = np.clip(weights, lo, hi)
 
         # ── compute step returns ──
         #   r_asset[i]  = (price[i+1] - price[i]) / price[i]

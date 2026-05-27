@@ -89,6 +89,11 @@ def run_one_fold(
     raw_metrics: bool = True,
     label_method: str | None = None,
     subdir: str = "walk_forward",
+    total_timesteps: int | None = None,
+    routing_mode: str | None = None,
+    prob_ema_span: int | None = None,
+    atr_sideways_enabled: bool | None = None,
+    atr_sideways_threshold: float | None = None,
 ) -> Dict:
     """Train + evaluate on a single walk-forward fold.
 
@@ -104,6 +109,24 @@ def run_one_fold(
 
     if label_method is not None:
         cfg.setdefault("regime", {})["label_method"] = label_method
+
+    if routing_mode is not None:
+        cfg.setdefault("regime", {})["routing_mode"] = routing_mode
+    if prob_ema_span is not None:
+        cfg.setdefault("regime", {})["prob_ema_span"] = int(prob_ema_span)
+    if atr_sideways_enabled is not None or atr_sideways_threshold is not None:
+        atr_cfg = cfg.setdefault("regime", {}).setdefault("atr_sideways_filter", {})
+        if atr_sideways_enabled is not None:
+            atr_cfg["enabled"] = bool(atr_sideways_enabled)
+        if atr_sideways_threshold is not None:
+            atr_cfg["threshold"] = float(atr_sideways_threshold)
+            atr_cfg["enabled"] = True
+
+    if total_timesteps is not None:
+        cfg.setdefault("hyperparameters", {}).setdefault("training", {})[
+            "total_timesteps"
+        ] = int(total_timesteps)
+        cfg.setdefault("training", {})["total_timesteps"] = int(total_timesteps)
 
     # Isolate per-fold artefacts.
     fold_tag = f"fold_{fold_idx}"
@@ -267,7 +290,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--label-method",
-        choices=["trend_scanning", "sma"],
+        choices=["trend_scanning", "causal_trend_scanning", "sma"],
         default=None,
         help="Override config.regime.label_method for every fold.",
     )
@@ -276,6 +299,18 @@ def main() -> int:
         default="walk_forward",
         help="Sub-directory under models/ and results/ for this run "
              "(use a unique name when running comparison studies).",
+    )
+    parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=None,
+        help="Override PPO total_timesteps per agent for every fold.",
+    )
+    parser.add_argument(
+        "--autopilot",
+        action="store_true",
+        help="After all folds finish, automatically run post-WF pipeline "
+             "(sanity → rebacktest → stats → report). See scripts/_post_wf_autopilot.py.",
     )
     args = parser.parse_args()
 
@@ -312,6 +347,7 @@ def main() -> int:
                 raw_metrics=not args.no_raw,
                 label_method=args.label_method,
                 subdir=args.subdir,
+                total_timesteps=args.total_timesteps,
             )
             fold_summaries.append(summary)
         except Exception as exc:
@@ -334,6 +370,13 @@ def main() -> int:
         (time.time() - t_total) / 60.0,
     )
     logger.info("Aggregate written to %s", out_dir / "summary.md")
+
+    if args.autopilot:
+        from scripts._post_wf_autopilot import run_post_pipeline
+
+        logger.info("Starting post-WF autopilot for subdir=%s", args.subdir)
+        return run_post_pipeline(subdir=args.subdir, skip_wait=True)
+
     return 0
 
 

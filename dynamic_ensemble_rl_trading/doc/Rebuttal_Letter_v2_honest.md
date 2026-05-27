@@ -65,6 +65,21 @@ ground truth and code disclosure surfaced both issues before
 publication. We treat this as the most valuable single intervention
 in the entire review process.
 
+3. **A Backtester implementation bug silently zeroed short positions
+   during metric computation.** While auditing the long-short action
+   space (Reviewer item #8), we found that `src/backtest/backtester.py`
+   clipped portfolio weights with `np.clip(weights, 0.0, 3.0)`, so
+   every negative weight was reported as flat even though the RL
+   environment trained and executed signed weights in \([-1,+1]\).
+   We fixed this in **Backtester v2.0.1** (`allow_short=True`,
+   symmetric clip to `[-max_position, +max_position]`) and
+   re-ran backtests on all five 1M walk-forward folds without
+   retraining. Mean Sharpe moved from **−29.93** (buggy metrics) to
+   **−39.57** (correct long-short execution) — the policy had learned
+   to short, but those shorts were not reflected in the originally
+   logged numbers. Sanity check: `scripts/_sanity_backtester_long_short.py`
+   (4/4 PASS). Full disclosure in §3.1 below.
+
 The revised manuscript replaces Table 2 with the honest
 walk-forward-5-fold means and their Bonferroni-corrected 95%
 confidence intervals (table reproduced in §3.1 below). Section 4 is
@@ -191,28 +206,25 @@ on CPU.
 
 ## §3.1 — Revised Table 2 (honest walk-forward, Bonferroni-corrected)
 
-We report two rows per metric: (i) the **v1 baseline** — the
-unmodified pipeline running under time-series-safe Walk-Forward
-expanding-window cross-validation and Trend-Scanning labels but
-*without* the v2 reward redesign described in §5 below; and (ii)
-the **v2-reward** row — the same pipeline with the v2 reward
-function applied (classifier and feature-fusion unchanged, so the
-delta isolates the reward contribution). The combined-v2 results
-(reward + classifier + visual-off) land at
-`results/walk_forward_reward_v2_full/` and are reported in the
-revised manuscript Section 4.
+We report four evaluation rows: (i) **v1 baseline @ 30k**; (ii)
+**v2-reward @ 30k** (§5.1 only); (iii) **full v2 @ 30k**; and
+(iv) **v2-reward @ 1M** with Backtester v2.0.1 post-rebacktest —
+the **canonical** row for the 90-day extension deliverable.
 
-| Metric | Original draft | v1 baseline (5-fold mean) | Bonferroni 95% CI | v2-reward (5-fold mean) | full v2 (5-fold mean) |
-|--------|---:|---:|---|---:|---:|
-| Sharpe Ratio       | 1.89  | −20.50 | [−24.50, −14.88] | **−12.81** ± 3.57 | −14.66 ± 3.23 |
-| Cumulative Return  | 0.893 | −0.737 | [−0.881, −0.545] | **−0.467** ± 0.286 | −0.569 ± 0.185 |
-| CAGR               | 0.342 | −0.961 | [−0.998, −0.887] | −0.753 ± 0.251 | −0.889 ± 0.095 |
-| Maximum Drawdown   | −0.162| −0.738 | [−0.881, −0.548] | **−0.468** ± 0.286 | −0.569 ± 0.185 |
-| Win Rate           | 0.678 | 0.101  | [0.034, 0.200]   | 0.044 ± 0.042 | 0.036 ± 0.019 |
-| Profit Factor      | 2.34  | 0.308  | [0.171, 0.460]   | 0.289 ± 0.110 | 0.251 ± 0.056 |
+| Metric | Original draft | v1 baseline (5-fold @ 30k) | Bonferroni 95% CI | v2-reward @ 30k | full v2 @ 30k | **v2-reward @ 1M (post-fix)** |
+|--------|---:|---:|---|---:|---:|---:|
+| Sharpe Ratio       | 1.89  | −20.50 | [−24.50, −14.88] | −12.81 ± 3.57 | −14.66 ± 3.23 | **−39.57 ± 4.88** |
+| Cumulative Return  | 0.893 | −0.737 | [−0.881, −0.545] | −0.467 ± 0.286 | −0.569 ± 0.185 | **−0.999 ± 0.001** |
+| CAGR               | 0.342 | −0.961 | [−0.998, −0.887] | −0.753 ± 0.251 | −0.889 ± 0.095 | ≈ −1.000 |
+| Maximum Drawdown   | −0.162| −0.738 | [−0.881, −0.548] | −0.468 ± 0.286 | −0.569 ± 0.185 | **−0.999 ± 0.001** |
+| Win Rate           | 0.678 | 0.101  | [0.034, 0.200]   | 0.044 ± 0.042 | 0.036 ± 0.019 | 0.314 ± 0.029 |
+| Profit Factor      | 2.34  | 0.308  | [0.171, 0.460]   | 0.289 ± 0.110 | 0.251 ± 0.056 | 0.276 ± 0.056 |
 
-(Per-fold table at ``results/walk_forward_v2_comparison.md``.
-"v2-reward" applies §5.1 only; "full v2" applies §5.1 + §5.2 + §5.3.)
+Bonferroni 95% CI for **v2-reward @ 1M (Sharpe)**: **[−43.17, −34.10]**
+(`results/walk_forward_reward_v2_1M/statistical_tests.md`).
+
+(Per-fold tables: `results/walk_forward_v2_comparison.md` (30k);
+`results/walk_forward_reward_v2_1M/summary_rebacktest.json` (1M).)
 
 **Honest read-through.**
 
@@ -241,12 +253,25 @@ revised manuscript Section 4.
   for the 90-day extension.
 * **Even with v2 the gap to the original draft is statistically
   significant:** the v2-reward mean Sharpe of −12.81 ± 3.57
-  (1-sigma over folds) falls outside the v1 Bonferroni CI's upper
-  bound of −14.88 by only 2.07, but the original-draft value of
-  +1.89 remains well outside any plausible re-computed v2 CI. We
-  are *not* claiming the gap is closed; we are claiming the gap is
-  partially attributable to a specific reward-design defect that
-  we now fix and document.
+  (30k) falls outside the v1 Bonferroni CI's upper bound of −14.88
+  by only 2.07, but the original-draft value of +1.89 remains well
+  outside any plausible re-computed CI. We are *not* claiming the gap
+  is closed; we are claiming the gap is partially attributable to a
+  specific reward-design defect that we now fix and document.
+* **v2-reward @ 1M (extension deliverable, post-rebacktest):** we
+  increased the PPO budget to **1,000,000 timesteps per agent**
+  (33× vs 30k) and re-ran the full 5-fold walk-forward protocol.
+  Mean Sharpe is **−39.57 ± 4.88** — **worse** than the 30k
+  reward-v2 row (−12.81), not better. This rules out
+  under-training as the primary explanation for negative walk-forward
+  means. The deterioration relative to the metrics logged at train
+  time (−29.93) is attributable to the Backtester clip bug disclosed
+  in §0 item 3: the policy learned short positions that were
+  silently zeroed in the original metric pipeline.
+* **Path A reframing:** given mean Sharpe ≤ −15 on the canonical
+  1M evaluation, the manuscript contribution is reframed as a
+  *Discovery-of-Flaws* audit (see `doc/Path_A_Reframing_FILLED.md`
+  and §4 below). We do not claim competitive trading performance.
 
 ### §3.1.1 — Single-split sensitivity (paper's original protocol)
 

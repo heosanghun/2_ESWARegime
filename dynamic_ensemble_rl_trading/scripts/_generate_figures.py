@@ -409,6 +409,94 @@ def fig_ppo_seed_instability() -> None:
     print(f"  wrote {FIG_DIR/'fig_ppo_seed_instability.png'}")
 
 
+# ---------------------------------------------------------------------
+# Figure G: 30k vs 1M walk-forward Sharpe (reward-only v2).
+# ---------------------------------------------------------------------
+def fig_1m_vs_30k_wf() -> None:
+    """Per-fold Sharpe: 30k reward-v2 vs 1M post-rebacktest."""
+    path_30k = PROJECT_ROOT / "results" / "walk_forward_reward_v2" / "summary.json"
+    path_1m = PROJECT_ROOT / "results" / "walk_forward_reward_v2_1M" / "summary_rebacktest.json"
+    if not path_30k.exists() or not path_1m.exists():
+        print("  fig_1m_vs_30k_wf: missing summary, skipped")
+        return
+
+    d30 = _load_json(path_30k)
+    d1m = _load_json(path_1m)
+    sharpes_30 = np.full(5, np.nan)
+    for f in d30["folds"]:
+        sharpes_30[f["fold"] - 1] = f["metrics"]["Sharpe Ratio"]
+    sharpes_1m = np.array(d1m["metrics_aggregate"]["Sharpe Ratio"]["values"])
+
+    fold_axis = np.arange(1, 6, dtype=float)
+    bar_w = 0.36
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.bar(fold_axis - bar_w / 2, sharpes_30, width=bar_w,
+           label="reward-v2 @ 30k", color="#4878d0")
+    ax.bar(fold_axis + bar_w / 2, sharpes_1m, width=bar_w,
+           label="reward-v2 @ 1M (post-rebacktest)", color="#d65f5f")
+    ax.axhline(0, color="black", lw=0.6)
+    ax.set_xticks(fold_axis)
+    ax.set_xticklabels([f"Fold {k}" for k in fold_axis.astype(int)])
+    ax.set_ylabel("Sharpe Ratio")
+    ax.set_title("1M training does not improve walk-forward Sharpe")
+    ax.legend(loc="lower left")
+    mean30 = float(np.nanmean(sharpes_30))
+    mean1m = float(np.nanmean(sharpes_1m))
+    ax.annotate(f"Mean 30k = {mean30:.1f}\nMean 1M = {mean1m:.1f}",
+                xy=(0.98, 0.05), xycoords="axes fraction",
+                ha="right", va="bottom", fontsize=9,
+                bbox=dict(boxstyle="round", fc="white", alpha=0.8))
+    fig.tight_layout()
+    fig.savefig(FIG_DIR / "fig_1m_vs_30k_wf.png")
+    plt.close(fig)
+    print(f"  wrote {FIG_DIR/'fig_1m_vs_30k_wf.png'}")
+
+
+# ---------------------------------------------------------------------
+# Figure H: Backtester clip-bug fix impact (1M WF).
+# ---------------------------------------------------------------------
+def fig_backtester_fix() -> None:
+    """Pre- vs post-rebacktest mean Sharpe and cum. return."""
+    status_path = PROJECT_ROOT / "results" / "walk_forward_reward_v2_1M" / "autopilot_status.json"
+    rebt_path = PROJECT_ROOT / "results" / "walk_forward_reward_v2_1M" / "summary_rebacktest.json"
+    if not status_path.exists() or not rebt_path.exists():
+        print("  fig_backtester_fix: missing autopilot artefacts, skipped")
+        return
+
+    status = _load_json(status_path)
+    rebt = _load_json(rebt_path)
+    pre = status["pre_rebacktest_aggregate"]["metrics_aggregate"]
+    post = rebt["metrics_aggregate"]
+
+    labels = ["Sharpe", "Cum. Ret."]
+    pre_vals = [pre["Sharpe Ratio"]["mean"], pre["Cumulative Return"]["mean"] * 100]
+    post_vals = [post["Sharpe Ratio"]["mean"], post["Cumulative Return"]["mean"] * 100]
+
+    x = np.arange(len(labels))
+    bar_w = 0.36
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.bar(x - bar_w / 2, pre_vals, width=bar_w,
+           label="Pre-fix (shorts clipped)", color="#bbbbbb")
+    ax.bar(x + bar_w / 2, post_vals, width=bar_w,
+           label="Post-fix v2.0.1 (long-short)", color="#d65f5f")
+    ax.axhline(0, color="black", lw=0.6)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_title("Backtester v2.0.1: shorts no longer zeroed")
+    ax.legend(loc="lower left", fontsize=9)
+    for i, (pv, qv) in enumerate(zip(pre_vals, post_vals)):
+        ax.annotate(f"{pv:.1f}", xy=(x[i] - bar_w / 2, pv),
+                    xytext=(0, -10 if pv < 0 else 3),
+                    textcoords="offset points", ha="center", fontsize=8)
+        ax.annotate(f"{qv:.1f}", xy=(x[i] + bar_w / 2, qv),
+                    xytext=(0, -10 if qv < 0 else 3),
+                    textcoords="offset points", ha="center", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(FIG_DIR / "fig_backtester_fix.png")
+    plt.close(fig)
+    print(f"  wrote {FIG_DIR/'fig_backtester_fix.png'}")
+
+
 def main() -> int:
     print(f"Writing figures to {FIG_DIR}")
     fig_classifier_accuracy()
@@ -417,6 +505,8 @@ def main() -> int:
     fig_reward_signal_spread()
     fig_v2_ablation()
     fig_ppo_seed_instability()
+    fig_1m_vs_30k_wf()
+    fig_backtester_fix()
     print("Done.")
     return 0
 

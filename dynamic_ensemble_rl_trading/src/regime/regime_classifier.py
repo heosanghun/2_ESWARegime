@@ -68,6 +68,7 @@ class RegimeClassifier:
         reg_alpha: float = 0.0,
         min_child_weight: float = 1.0,
         early_stopping_rounds: Optional[int] = 30,
+        prob_ema_span: int = 0,
     ):
         """
         Initialise the RegimeClassifier.
@@ -102,6 +103,9 @@ class RegimeClassifier:
         early_stopping_rounds : int or None, default=30
             Round count for XGBoost early stopping when validation
             data is supplied to :meth:`fit`. Set ``None`` to disable.
+        prob_ema_span : int, default=0
+            Span for exponential moving average of class probabilities
+            during sequential inference. ``0`` disables smoothing.
         """
         if not XGBOOST_AVAILABLE:
             raise ImportError("XGBoost is required for RegimeClassifier")
@@ -117,6 +121,10 @@ class RegimeClassifier:
         self.reg_alpha = reg_alpha
         self.min_child_weight = min_child_weight
         self.early_stopping_rounds = early_stopping_rounds
+        self.prob_ema_span = int(prob_ema_span)
+        self._ema_alpha = (
+            2.0 / (self.prob_ema_span + 1.0) if self.prob_ema_span > 0 else 0.0
+        )
 
         self.model = xgb.XGBClassifier(
             n_estimators=n_estimators,
@@ -135,7 +143,29 @@ class RegimeClassifier:
 
         self.is_fitted = False
         self.current_regime: Optional[int] = None
-    
+        self._ema_proba: Optional[np.ndarray] = None
+        self._last_smoothed_proba: Optional[np.ndarray] = None
+
+    def reset_smoothing(self) -> None:
+        """Reset sequential probability EMA state (call at backtest start)."""
+        self._ema_proba = None
+        self._last_smoothed_proba = None
+        self.current_regime = None
+
+    def _smooth_proba(self, raw_proba: np.ndarray) -> np.ndarray:
+        """Apply EMA to a single-step probability vector."""
+        if self.prob_ema_span <= 0:
+            smoothed = raw_proba
+        elif self._ema_proba is None:
+            self._ema_proba = raw_proba.copy()
+            smoothed = self._ema_proba
+        else:
+            a = self._ema_alpha
+            self._ema_proba = a * raw_proba + (1.0 - a) * self._ema_proba
+            smoothed = self._ema_proba
+        self._last_smoothed_proba = smoothed.copy()
+        return smoothed
+
     def fit(
         self,
         X: np.ndarray,
@@ -278,12 +308,11 @@ class RegimeClassifier:
         if not self.is_fitted:
             raise ValueError("Model not fitted. Call fit() first.")
         
-        # Get probability distribution
-        proba = self.predict_proba(state.reshape(1, -1))[0]
-        
-        # Maximum probability (confidence)
-        max_prob = np.max(proba)
-        predicted_regime = np.argmax(proba)
+        raw_proba = self.predict_proba(state.reshape(1, -1))[0]
+        proba = self._smooth_proba(raw_proba)
+
+        max_prob = float(np.max(proba))
+        predicted_regime = int(np.argmax(proba))
         
         # Confidence-based selection.
         #
@@ -342,20 +371,22 @@ class RegimeClassifier:
         regime, confidence = self.select_regime_with_confidence(
             state, previous_regime
         )
-        
-        proba = self.predict_proba(state.reshape(1, -1))[0]
-        
+        proba = self._last_smoothed_proba
+        if proba is None:
+            raw_proba = self.predict_proba(state.reshape(1, -1))[0]
+            proba = self._smooth_proba(raw_proba)
+
         regime_names = ['Bear', 'Sideways', 'Bull']
-        
+
         return {
             'regime': regime,
             'confidence': confidence,
             'probabilities': {
-                'Bear': proba[0],
-                'Sideways': proba[1],
-                'Bull': proba[2]
+                'Bear': float(proba[0]),
+                'Sideways': float(proba[1]),
+                'Bull': float(proba[2]),
             },
-            'regime_name': regime_names[regime]
+            'regime_name': regime_names[regime],
         }
     
     def save_model(self, filepath: str) -> None:

@@ -55,10 +55,15 @@ def evaluate_system(config):
     )
     
     # Run backtest
+    env_cfg = config.get('environment', {})
     backtester = Backtester(
         initial_capital=config['training']['initial_capital'],
         transaction_fee=config['training']['transaction_fee'],
-        slippage=config['training']['slippage']
+        slippage=config['training']['slippage'],
+        allow_short=bool(env_cfg.get('allow_short', True)),
+        max_position=config.get('training', {}).get(
+            'max_position', env_cfg.get('max_position', 1.0)
+        ),
     )
     
     backtest_results = backtester.run_backtest(

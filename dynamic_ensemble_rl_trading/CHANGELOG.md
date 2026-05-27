@@ -7,6 +7,45 @@ caveat that the public API at this stage of the manuscript is the
 ``scripts/train_and_verify.py`` /
 ``scripts/run_walk_forward.py`` command-line interface.
 
+## [v2.0.1] — 2026-05-19 (Backtester long-short fix; apply metrics after 1M WF completes)
+
+### Fixed
+
+- **`src/backtest/backtester.py`** — Walk-forward Sharpe/CumRet
+  previously clipped all negative ``effective_weight`` values to
+  zero via ``np.clip(weights, 0.0, 3.0)``, silently disabling
+  short positions in every reported metric while PPO trained on
+  long-short actions. The backtester now uses the same
+  ``LONG_SHORT_WEIGHT_MAP`` as ``MultiRegimeTradingEnv`` and
+  symmetric clipping ``[-max_position, +max_position]``.
+- **`scripts/train_and_verify.py`**, **`scripts/evaluate.py`** —
+  forward ``allow_short`` and ``max_position`` from config into
+  ``Backtester``.
+
+### Added
+
+- **`scripts/_sanity_backtester_long_short.py`** — constant-weight
+  sanity checks (long/short/flat × up/down drift).
+- **`scripts/_rebacktest_walk_forward_folds.py`** — re-run STEP 3
+  backtest only on existing fold models (no PPO retraining).
+
+### Added (autopilot)
+
+- **`scripts/_post_wf_autopilot.py`** — watches for walk-forward
+  completion, then automatically runs sanity → rebacktest → scenario
+  → Bonferroni → comparison report (T1–T5). State in
+  ``results/<subdir>/autopilot_status.json``.
+- **`doc/POST_WF_AUTOPILOT.md`** — operator guide.
+- **`run_walk_forward.py --autopilot`** — chain autopilot after all
+  folds on future runs.
+
+### Notes
+
+- Folds already backtested **before this fix** (including the
+  in-flight 1M WF run started 2026-05-17) used the old clip
+  behaviour. After Fold 5 training finishes, refresh metrics with:
+  ``python scripts/_rebacktest_walk_forward_folds.py --subdir walk_forward_reward_v2_1M --raw-metrics``
+
 ## [v2.0.0] — 2026-05-15
 
 ### Added

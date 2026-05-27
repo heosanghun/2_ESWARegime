@@ -104,17 +104,22 @@ class TrendScanningLabeler:
     def generate_labels(
         self,
         price_data: pd.Series,
+        direction: str = "forward",
     ) -> pd.Series:
         """
-        Generate forward-looking regime labels for every timestamp.
+        Generate regime labels for every timestamp.
 
-        For each t, scan horizons L in [horizon_min, horizon_max] over the
-        FUTURE window (t..t+L). Keep the horizon with the largest |t-value|
-        and assign the label based on its sign / magnitude.
-
-        Tail observations whose forward window is incomplete are labelled
-        `Sideways` (1) to keep the index aligned with `price_data`.
+        direction='forward' (default)
+            Scan FUTURE windows (t..t+L) — López de Prado Trend Scanning.
+        direction='backward'
+            Scan PAST windows (t-L..t) — causal / no lookahead. Usable at
+            inference without future price data.
         """
+        if direction not in ("forward", "backward"):
+            raise ValueError("direction must be 'forward' or 'backward'")
+        if direction == "backward":
+            return self._generate_labels_backward(price_data)
+
         if not isinstance(price_data, pd.Series):
             raise TypeError("price_data must be a pandas Series")
         prices = price_data.astype(float).values
@@ -160,7 +165,60 @@ class TrendScanningLabeler:
 
         counts = result.value_counts().sort_index().to_dict()
         logger.info(
-            "TrendScanning labels: Bear=%d Sideways=%d Bull=%d "
+            "TrendScanning labels (forward): Bear=%d Sideways=%d Bull=%d "
+            "(horizon=%d..%d, |t|>%.2f)",
+            counts.get(0, 0),
+            counts.get(1, 0),
+            counts.get(2, 0),
+            self.horizon_min,
+            self.horizon_max,
+            self.t_threshold,
+        )
+        return result
+
+    def _generate_labels_backward(self, price_data: pd.Series) -> pd.Series:
+        """Causal labels: scan past windows ending at t (no future data)."""
+        if not isinstance(price_data, pd.Series):
+            raise TypeError("price_data must be a pandas Series")
+        prices = price_data.astype(float).values
+        if self.use_log_price:
+            prices = np.log(np.clip(prices, 1e-12, None))
+
+        n = len(prices)
+        labels = np.full(n, 1, dtype=int)
+        tvals_out = np.zeros(n, dtype=np.float64)
+        horizons_out = np.zeros(n, dtype=np.int64)
+        horizons: List[int] = list(range(self.horizon_min, self.horizon_max + 1))
+
+        for t in range(n):
+            best_t = 0.0
+            best_h = 0
+            for h in horizons:
+                start = t - h
+                if start < 0:
+                    continue
+                window = prices[start : t + 1]
+                _, tval = self._tvalue(window)
+                if abs(tval) > abs(best_t):
+                    best_t = tval
+                    best_h = h
+            tvals_out[t] = best_t
+            horizons_out[t] = best_h
+            if best_t > self.t_threshold:
+                labels[t] = 2
+            elif best_t < -self.t_threshold:
+                labels[t] = 0
+            else:
+                labels[t] = 1
+
+        result = pd.Series(labels, index=price_data.index, dtype=int)
+        result.attrs["t_values"] = pd.Series(tvals_out, index=price_data.index)
+        result.attrs["selected_horizon"] = pd.Series(
+            horizons_out, index=price_data.index
+        )
+        counts = result.value_counts().sort_index().to_dict()
+        logger.info(
+            "TrendScanning labels (backward/causal): Bear=%d Sideways=%d Bull=%d "
             "(horizon=%d..%d, |t|>%.2f)",
             counts.get(0, 0),
             counts.get(1, 0),

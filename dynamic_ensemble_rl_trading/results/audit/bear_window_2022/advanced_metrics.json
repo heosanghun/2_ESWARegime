@@ -1,0 +1,233 @@
+{
+  "window": [
+    "2022-04-19",
+    "2022-12-19"
+  ],
+  "annualization_factor": 8760,
+  "honest_mode": true,
+  "generated": "2026-05-26T23:50:40",
+  "buy_and_hold": {
+    "n_bars": 5879,
+    "Sharpe Ratio": -1.7598336425586971,
+    "Sortino Ratio": -2.4516298354727772,
+    "Cumulative Return": -0.597882526242761,
+    "CAGR": -0.7426842484682926,
+    "Maximum Drawdown": -0.6334406108729768,
+    "Calmar Ratio": -1.1724607417335646,
+    "VaR 95% (per-bar)": -0.010041990973430458,
+    "CVaR 95% (per-bar)": -0.017372535255452015,
+    "Pain Index": 0.46248055059579285,
+    "Ulcer Index": 0.48503857433940134,
+    "mean_bar_return": -0.00013076019086230144,
+    "bar_return_std": 0.0069543410157027,
+    "downside_std": 0.004991978439885211,
+    "pct_flat_bars": 0.0,
+    "window": [
+      "2022-04-19",
+      "2022-12-19"
+    ]
+  },
+  "configurations": {
+    "atr18_screen": {
+      "label": "ATR 1.8% sideways filter (best honest)",
+      "config_spec": {
+        "label": "ATR 1.8% sideways filter (best honest)",
+        "subdir": "autonomous/screen_extra_18",
+        "model_subdir": "walk_forward_reward_v2",
+        "classifier_subdir": "walk_forward_reward_v2",
+        "confidence_threshold": 0.35,
+        "prob_ema_span": 12,
+        "routing_mode": "soft",
+        "label_method": "trend_scanning",
+        "atr_threshold": 0.018
+      },
+      "per_fold": [
+        {
+          "fold": 1,
+          "test_window": [
+            "2022-04-19",
+            "2022-08-19"
+          ],
+          "metrics": {
+            "n_bars": 2927,
+            "Sharpe Ratio": -1.0735563658790046,
+            "Sortino Ratio": -1.5063645636766967,
+            "Cumulative Return": -0.1482604975122016,
+            "CAGR": -0.38138508229700674,
+            "Maximum Drawdown": -0.2523811598411948,
+            "Calmar Ratio": -1.5111471971084718,
+            "VaR 95% (per-bar)": -0.0008302572564025664,
+            "CVaR 95% (per-bar)": -0.00900966669153676,
+            "Pain Index": 0.11707634225243946,
+            "Ulcer Index": 0.13872182933730948,
+            "mean_bar_return": -4.6571329664474753e-05,
+            "bar_return_std": 0.004060185157722433,
+            "downside_std": 0.002893614021350467,
+            "pct_flat_bars": 0.8951144516569867
+          },
+          "rerun_metrics_aggregated": {
+            "Sharpe Ratio": -3.3027244080746248,
+            "Cumulative Return": -0.3743176062744954,
+            "CAGR": -0.7571852883645124,
+            "Maximum Drawdown": -0.3773835114887417,
+            "Win Rate": 0.044072429108302016,
+            "Profit Factor": 0.7251904708933684
+          }
+        },
+        {
+          "fold": 2,
+          "test_window": [
+            "2022-08-19",
+            "2022-12-19"
+          ],
+          "metrics": {
+            "n_bars": 2927,
+            "Sharpe Ratio": 1.5707235105002664,
+            "Sortino Ratio": 3.0082816365716925,
+            "Cumulative Return": 0.08279859255663657,
+            "CAGR": 0.268805879996439,
+            "Maximum Drawdown": -0.057115515680723955,
+            "Calmar Ratio": 4.706354775803222,
+            "VaR 95% (per-bar)": 0.0,
+            "CVaR 95% (per-bar)": -7.83598377357954e-05,
+            "Pain Index": 0.029572679021708688,
+            "Ulcer Index": 0.03753190674515268,
+            "mean_bar_return": 2.8617941164395307e-05,
+            "bar_return_std": 0.0017052603544726423,
+            "downside_std": 0.0008903729284292245,
+            "pct_flat_bars": 0.9668602664844551
+          },
+          "rerun_metrics_aggregated": {
+            "Sharpe Ratio": -1.3169172746936253,
+            "Cumulative Return": -0.07595884652241057,
+            "CAGR": -0.21216373271056044,
+            "Maximum Drawdown": -0.10288287582967419,
+            "Win Rate": 0.01093269559275709,
+            "Profit Factor": 0.794237074959148
+          }
+        }
+      ],
+      "aggregate_bear_window": {
+        "n_bars": 5854,
+        "Sharpe Ratio": -0.26979205297691866,
+        "Sortino Ratio": -0.3924633440076931,
+        "Cumulative Return": -0.07773766548132222,
+        "CAGR": -0.11405291070229784,
+        "Maximum Drawdown": -0.2523811598411948,
+        "Calmar Ratio": -0.45190738791304025,
+        "VaR 95% (per-bar)": 0.0,
+        "CVaR 95% (per-bar)": -0.0002748305203881216,
+        "Pain Index": 0.15312495794892797,
+        "Ulcer Index": 0.1691961009548092,
+        "mean_bar_return": -8.976694250039725e-06,
+        "bar_return_std": 0.0031141486079464473,
+        "downside_std": 0.0021407669252204516,
+        "pct_flat_bars": 0.9309873590707208
+      }
+    },
+    "s1_soft_ema12": {
+      "label": "S1 soft routing + EMA12 (primary honest)",
+      "config_spec": {
+        "label": "S1 soft routing + EMA12 (primary honest)",
+        "subdir": "routing_ablation/phase2_soft/S1_soft_ema12",
+        "model_subdir": "walk_forward_reward_v2",
+        "classifier_subdir": "walk_forward_reward_v2",
+        "confidence_threshold": 0.35,
+        "prob_ema_span": 12,
+        "routing_mode": "soft",
+        "label_method": "trend_scanning",
+        "atr_threshold": null
+      },
+      "per_fold": [
+        {
+          "fold": 1,
+          "test_window": [
+            "2022-04-19",
+            "2022-08-19"
+          ],
+          "metrics": {
+            "n_bars": 2927,
+            "Sharpe Ratio": -2.4528853304802323,
+            "Sortino Ratio": -3.4637218572406345,
+            "Cumulative Return": -0.39913395279308606,
+            "CAGR": -0.7822690484847321,
+            "Maximum Drawdown": -0.5189540408848874,
+            "Calmar Ratio": -1.5073956205271217,
+            "VaR 95% (per-bar)": -0.00860431537981756,
+            "CVaR 95% (per-bar)": -0.014719266904571994,
+            "Pain Index": 0.25133167478755375,
+            "Ulcer Index": 0.30221281807678807,
+            "mean_bar_return": -0.00015625015262082177,
+            "bar_return_std": 0.005962045106144463,
+            "downside_std": 0.0042221095062677915,
+            "pct_flat_bars": 0.037239494362828834
+          },
+          "rerun_metrics_aggregated": {
+            "Sharpe Ratio": -11.578210004308422,
+            "Cumulative Return": -0.9101170129754369,
+            "CAGR": -0.999305653773416,
+            "Maximum Drawdown": -0.9140045786252301,
+            "Win Rate": 0.4294499487529894,
+            "Profit Factor": 0.6562218182324435
+          }
+        },
+        {
+          "fold": 2,
+          "test_window": [
+            "2022-08-19",
+            "2022-12-19"
+          ],
+          "metrics": {
+            "n_bars": 2927,
+            "Sharpe Ratio": 0.10215704669274593,
+            "Sortino Ratio": 0.15280435575095289,
+            "Cumulative Return": -0.015495634019584537,
+            "CAGR": -0.0456633560572115,
+            "Maximum Drawdown": -0.18595960611696719,
+            "Calmar Ratio": -0.24555524186521235,
+            "VaR 95% (per-bar)": -0.005343167594700815,
+            "CVaR 95% (per-bar)": -0.010008902386817153,
+            "Pain Index": 0.08943871881475027,
+            "Ulcer Index": 0.10381260875437509,
+            "mean_bar_return": 4.954573835053476e-06,
+            "bar_return_std": 0.004539311943783037,
+            "downside_std": 0.003034747929239518,
+            "pct_flat_bars": 0.06388793987017424
+          },
+          "rerun_metrics_aggregated": {
+            "Sharpe Ratio": -10.906068225488914,
+            "Cumulative Return": -0.8288189300599365,
+            "CAGR": -0.9951458489398417,
+            "Maximum Drawdown": -0.8411431560922809,
+            "Win Rate": 0.387769046805603,
+            "Profit Factor": 0.6629689148535484
+          }
+        }
+      ],
+      "aggregate_bear_window": {
+        "n_bars": 5854,
+        "Sharpe Ratio": -1.3360816762663912,
+        "Sortino Ratio": -1.925718697342906,
+        "Cumulative Return": -0.4084447531553963,
+        "CAGR": -0.5441616234326543,
+        "Maximum Drawdown": -0.5524732636261908,
+        "Calmar Ratio": -0.9849555793180244,
+        "VaR 95% (per-bar)": -0.006885395685681649,
+        "CVaR 95% (per-bar)": -0.012688247499420692,
+        "Pain Index": 0.37715976674350205,
+        "Ulcer Index": 0.4153427612038763,
+        "mean_bar_return": -7.564778939288415e-05,
+        "bar_return_std": 0.005299260715070939,
+        "downside_std": 0.003676676738369883,
+        "pct_flat_bars": 0.05056371711650154
+      }
+    }
+  },
+  "v1_baseline_calmar_only": {
+    "label": "v1 baseline (Calmar only)",
+    "CAGR_mean": -0.9978780523260211,
+    "MDD_mean": -0.875246059799122,
+    "Calmar Ratio": -1.1401114476939713,
+    "note": "Sortino/CVaR not computed (re-run skipped to save compute)."
+  }
+}
