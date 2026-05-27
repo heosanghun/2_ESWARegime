@@ -2,7 +2,7 @@
 
 **Manuscript ID:** ESWA-D-26-08980
 **Title:** A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes
-**Authors:** Sanghoon Heo, Youngbae Hwang
+**Authors:** [Redacted for double-blind peer review — see Editorial Manager manuscript record]
 **Decision under appeal:** Major Revision
 **Subject of this letter:** Request for an extension to the revision deadline + disclosure of substantive findings discovered during the revision.
 
@@ -67,7 +67,7 @@ In the interest of full transparency to the editorial team — and so
 that the requested extension can be evaluated against concrete
 deliverables already in place — we summarise below what is already
 complete and publicly available in our GitHub repository
-(https://github.com/heosanghun/2_ESWARegime).
+(anonymous supplementary repository linked in the editorial submission).
 
 ### 2.1 Reviewer #3 methodology overhauls (complete)
 
@@ -155,8 +155,7 @@ than the original draft.
 
 Sincerely,
 
-**Sanghoon Heo**, *corresponding author*
-**Youngbae Hwang**, *advisor*
+[Authors redacted for double-blind peer review]
 
 ---
 
@@ -166,4 +165,4 @@ _Attachments referenced in this letter:_
 - `doc/TECHNICAL_RECOMMENDATIONS.md` — re-engineering plan
 - `results/walk_forward/` — per-fold backtests, CIs, classifier metrics
 - `results/walk_forward_sma/label_method_comparison.md` — labelling diagnostic
-- GitHub repository: https://github.com/heosanghun/2_ESWARegime
+- Anonymous supplementary repository (URL in editorial submission)

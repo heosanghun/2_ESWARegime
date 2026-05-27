@@ -1,6 +1,6 @@
 # GitHub Upload Exclusions (ESWA Reviewer Release)
 
-**Repository:** https://github.com/heosanghun/2_ESWARegime  
+**Supplementary repository:** Anonymous double-blind mirror (URL supplied via the editorial system).  
 **Purpose:** Publish only **reproducible audit evidence** for ESWA reviewers; exclude internal notes, large binaries, and experimental branches.
 
 **Reviewer entry point:** [`doc/REVIEWER_INDEX.md`](REVIEWER_INDEX.md)

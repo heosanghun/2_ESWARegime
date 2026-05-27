@@ -5,7 +5,7 @@ results reported in ESWA-D-26-08980.
 
 ## 1. Code
 
-* Public repository: https://github.com/heosanghun/2_ESWARegime
+* Supplementary repository: anonymous double-blind mirror (URL supplied via the editorial system)
 * Frozen commit / tag (to be filled at acceptance): `ESWA-final`
 * Direct DOI (Zenodo mirror, to be created at acceptance): `10.5281/zenodo.<placeholder>`
 
@@ -70,9 +70,8 @@ Hardware used for reported numbers:
 ## 5. End-to-end reproduction commands
 
 ```bash
-# 1. Install
-git clone https://github.com/heosanghun/2_ESWARegime
-cd 2_ESWARegime/dynamic_ensemble_rl_trading
+# 1. Install — use anonymous supplementary ZIP or clone URL from editorial letter
+cd dynamic_ensemble_rl_trading
 python -m venv .venv && source .venv/bin/activate   # or .venv\Scripts\activate
 pip install -r requirements.txt
 

@@ -84,11 +84,12 @@ data files and trained model weights (see Data section below).
 6. ANONYMITY NOTE
 --------------------------------------------------------------------------------
 
-  If you received an anonymous GitHub mirror (anonymous.4open.science), use this
-  ZIP or that link interchangeably — contents match the reviewer release branch.
+  If you received an anonymous mirror (anonymous.4open.science), use this ZIP or that
+  link interchangeably. URL suffixes such as "-6EED" are system-assigned random IDs,
+  not passwords or author codes — see doc/ANONYMOUS_SUPPLEMENTARY_REPOSITORY.md.
 
-  Do not attempt to de-anonymize authors from commit metadata in public forks;
-  this bundle is supplied for reproducibility audit only.
+  Do not attempt to de-anonymize authors from commit metadata; this bundle is for
+  reproducibility audit only.
 
 --------------------------------------------------------------------------------
 Questions: refer to doc/REVIEWER_INDEX.md and doc/Response_Letter_v2_english.md

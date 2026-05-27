@@ -1,6 +1,6 @@
 # Dynamic Ensemble Reinforcement Learning Trading System
 
-**Repository:** https://github.com/heosanghun/2_ESWARegime  
+**Supplementary repository:** Anonymous double-blind mirror (URL supplied via the editorial system — not an author-linked GitHub account during review).  
 **Manuscript ID:** ESWA-D-26-08980
 
 > **ESWA reviewers:** start at [`doc/REVIEWER_INDEX.md`](doc/REVIEWER_INDEX.md), then run `python reproduce.py`.
@@ -156,8 +156,8 @@ Place OHLCV at `data/raw/btcusdt_1h.csv`. Candlestick images are generated in-co
 ## Installation
 
 ```bash
-git clone https://github.com/heosanghun/2_ESWARegime.git
-cd 2_ESWARegime/dynamic_ensemble_rl_trading
+# Obtain the anonymous supplementary ZIP or clone URL from the editorial submission letter.
+cd dynamic_ensemble_rl_trading
 python -m venv venv
 source venv/bin/activate   # Linux/macOS
 # venv\Scripts\activate    # Windows
@@ -192,6 +192,7 @@ Classifier accuracy (~46%) → mis-routing → long-short amplification is the p
 ## Documentation index
 
 - **Start here:** `doc/REVIEWER_INDEX.md`
+- **Anonymous mirror FAQ:** `doc/ANONYMOUS_SUPPLEMENTARY_REPOSITORY.md`
 - **Upload exclusions:** `doc/GITHUB_UPLOAD_EXCLUSIONS.md`
 - **Full synthesis:** `doc/AUTONOMOUS_FINAL_SYNTHESIS.md`
 

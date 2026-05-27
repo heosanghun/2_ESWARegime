@@ -447,7 +447,7 @@ scripts/run_overnight_autonomous.py                   # Reproduces this entire r
 ## Decisions deferred to operator's return (10 AM KST)
 
 - Whether to `git push` the current state to
-  https://github.com/heosanghun/2_ESWARegime (the code now contains the
+  anonymous supplementary repository (URL in editorial submission; the code now contains the
   honest reproduction path; the README needs an honesty section before
   push).
 - Which of the two principled options above to pursue.

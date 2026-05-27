@@ -1,10 +1,12 @@
 # ESWA-D-26-08980 — Reviewer Navigation Index
 
-**Repository:** https://github.com/heosanghun/2_ESWARegime  
+**Supplementary repository:** Anonymous double-blind mirror (URL supplied via the editorial system).  
 **Manuscript ID:** ESWA-D-26-08980  
 **One-command reproduction:** `python reproduce.py`
 
-**Offline bundle:** unzip `ESWA-D-26-08980_reviewer_code.zip` (build via `python scripts/package_reviewer_bundle.py`) and open [`REVIEWER_QUICKSTART.txt`](../REVIEWER_QUICKSTART.txt) at the archive root.
+**Offline bundle:** unzip `ESWA-D-26-08980_reviewer_code.zip` and open [`REVIEWER_QUICKSTART.txt`](../REVIEWER_QUICKSTART.txt) at the archive root.
+
+**Anonymous mirror FAQ:** [`doc/ANONYMOUS_SUPPLEMENTARY_REPOSITORY.md`](ANONYMOUS_SUPPLEMENTARY_REPOSITORY.md) — explains suffixes like `-6EED` in anonymous URLs (system-assigned, not passwords).
 
 This index lists the **minimum set of artefacts** intended for ESWA reviewers. Internal meeting notes, draft PDFs, and experimental phase reports are **not** included in this repository.
 

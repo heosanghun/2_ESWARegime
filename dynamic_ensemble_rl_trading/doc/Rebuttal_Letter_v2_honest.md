@@ -3,8 +3,8 @@
 **Manuscript ID:** ESWA-D-26-08980
 **Title:** _A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes_
 **Decision:** Major Revision
-**Authors:** Sanghoon Heo, Youngbae Hwang
-**Repository:** https://github.com/heosanghun/2_ESWARegime
+**Authors:** [Redacted for double-blind peer review — see Editorial Manager manuscript record]  
+**Supplementary code:** Anonymous mirror URL supplied via the editorial system (see `doc/REVIEWER_INDEX.md`).
 
 ---
 
@@ -185,7 +185,7 @@ pipeline are reported in the revised manuscript Section 5.
 ### #4.1 — Public code release
 
 **Action taken.** The entire codebase is at
-https://github.com/heosanghun/2_ESWARegime including:
+anonymous supplementary repository (URL in editorial submission) including:
 
 - All revised modules.
 - The `config.paper_alignment` block is **retained** in the source
@@ -568,5 +568,4 @@ post-processing artefact visible. We believe the revised manuscript
 is more truthful and more useful as a result.
 
 Sincerely,
-**Sanghoon Heo** (corresponding author)
-**Youngbae Hwang** (advisor)
+**[Authors redacted for double-blind peer review]**

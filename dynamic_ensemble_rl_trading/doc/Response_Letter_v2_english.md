@@ -3,8 +3,8 @@
 **Manuscript ID:** ESWA-D-26-08980
 **Title (proposed v2):** _An Auditable Regime-Aware XGBoost-PPO Ensemble for Capital Preservation under Crisis and Out-of-Sample Regimes: A Reproducibility-First Re-evaluation_
 **Decision:** Major Revision
-**Authors:** Sanghoon Heo, Youngbae Hwang
-**Public repository:** https://github.com/heosanghun/2_ESWARegime
+**Authors:** [Redacted for double-blind peer review — see Editorial Manager manuscript record]  
+**Supplementary code:** Anonymous mirror URL supplied via the editorial system (see `doc/REVIEWER_INDEX.md`).
 **One-command reproducibility:** `python reproduce.py`
 
 ---
@@ -119,7 +119,7 @@ We performed an explicit **SHAP analysis** on the fold-5 XGBoost classifier (Tab
 
 ## §4 — Response to Reviewer #4 (Open source release)
 
-We have published the full open-source repository at https://github.com/heosanghun/2_ESWARegime, including:
+We have published the full supplementary repository via the anonymous double-blind mirror linked in the editorial submission, including:
 
 1. **`reproduce.py`** — a single command that reproduces every headline number in the manuscript on the reviewer's hardware. Three runnable blocks: (i) bootstrap CIs for S1 and ATR-screen; (ii) 2022 bear-window advanced metrics (Sortino/Calmar/CVaR/Pain/Ulcer); (iii) OOS 2024 forward test. The script hard-sets `ESWA_RAW_MODE=1` and monkey-patches PPO to deterministic mode.
 
@@ -163,6 +163,6 @@ We are grateful for the depth and quality of the review comments — they direct
 
 Sincerely,
 
-Sanghoon Heo (corresponding author), Youngbae Hwang
+[Authors redacted for double-blind peer review]
 
 2026-05-27

@@ -1,6 +1,6 @@
 # ESWA-D-26-08980 — 18 Reviewer Items Mapping
 
-**Repository:** https://github.com/heosanghun/2_ESWARegime  
+**Supplementary repository:** Anonymous double-blind mirror (URL supplied via the editorial system).  
 **Decision:** Major Revision  
 **Updated:** 2026-05-27 (honest-measurement audit pass)
 

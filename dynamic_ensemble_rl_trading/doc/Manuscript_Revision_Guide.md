@@ -102,7 +102,7 @@ be supported._
 > three distinct market regimes. We release the full open-source
 > diagnostic pipeline, a one-command reproducibility entry point, and
 > a CI workflow that enforces the audit's honesty contract at
-> https://github.com/heosanghun/2_ESWARegime.
+> anonymous supplementary repository (URL in editorial submission).
 
 ---
 
@@ -769,7 +769,7 @@ complete account of Reviewer #3's concern.
 > reproducibility entry point (`reproduce.py`), a CI workflow that
 > enforces the audit's honesty contract on every commit, and the full
 > trained model artefacts at
-> https://github.com/heosanghun/2_ESWARegime.
+> anonymous supplementary repository (URL in editorial submission).
 
 ---
 

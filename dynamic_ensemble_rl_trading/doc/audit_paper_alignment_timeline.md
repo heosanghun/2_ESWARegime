@@ -207,10 +207,9 @@ if not (len(sys.argv) > 1 and sys.argv[1] == "--i-understand-this-is-deprecated-
 ## 7. Recommended escalation path (if reviewer requests Option A)
 
 ```bash
-# Clone the public mirror to a separate folder (do not pollute this workspace):
-git clone https://github.com/heosanghun/2_ESWARegime.git D:\AI\ESWARegime_git
-
-cd D:\AI\ESWARegime_git
+# Clone the anonymous supplementary mirror URL from the editorial submission letter,
+# or unzip ESWA-D-26-08980_reviewer_code.zip, then:
+cd dynamic_ensemble_rl_trading
 
 # Earliest appearance of the paper_alignment block:
 git log -p --diff-filter=A -- "**/config/config.yaml" | sls -SimpleMatch "paper_alignment"
