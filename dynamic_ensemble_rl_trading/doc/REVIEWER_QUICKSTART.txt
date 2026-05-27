@@ -1,0 +1,94 @@
+ESWA-D-26-08980 — Reviewer Quick Start
+========================================
+
+Manuscript: A Robust Dynamic Ensemble Reinforcement Learning Trading System
+           for Responding to Market Regimes
+
+This bundle contains code, audit scripts, pre-computed audit JSON/MD results,
+and documentation for blind-review supplementary material. It excludes large
+data files and trained model weights (see Data section below).
+
+--------------------------------------------------------------------------------
+1. UNZIP AND OPEN THE INDEX
+--------------------------------------------------------------------------------
+
+  Unzip this archive, then open:
+
+    doc/REVIEWER_INDEX.md
+
+  Read README.md (Honesty Statement) and doc/Response_Letter_v2_english.md next.
+
+--------------------------------------------------------------------------------
+2. ENVIRONMENT (Python 3.9+)
+--------------------------------------------------------------------------------
+
+  python -m venv venv
+  venv\Scripts\activate          # Windows
+  # source venv/bin/activate     # Linux / macOS
+
+  pip install -r requirements.txt
+
+  Optional GPU: CUDA helps training only; audit reproduction uses precomputed
+  artefacts and re-runs backtests (CPU is sufficient for headline checks).
+
+--------------------------------------------------------------------------------
+3. ONE-COMMAND REPRODUCTION
+--------------------------------------------------------------------------------
+
+  Fastest check (~1 minute, no large data download):
+
+    python reproduce.py --only ci
+
+  Full audit bundle (CI + 2022 bear + OOS 2024):
+
+    python reproduce.py
+
+  Individual blocks:
+
+    python reproduce.py --only bear
+    python reproduce.py --only oos --download-data
+
+  Expected outputs: results/audit/*.json and *.md (see reproduce.py header).
+
+--------------------------------------------------------------------------------
+4. DATA (NOT INCLUDED IN THIS ZIP)
+--------------------------------------------------------------------------------
+
+  OHLCV hourly bars:
+    python scripts/download_hourly_data.py
+    OR Google Drive folder linked in README.md
+
+  News sentiment CSV (2021–2023):
+    Google Drive — see README.md Data section
+
+  OOS 2024 window:
+    python scripts/fetch_oos_2024_data.py   (used by reproduce.py --download-data)
+
+  Candlestick chart ZIP (~7 GB) is OPTIONAL; charts are generated from OHLCV in code.
+
+  Trained PPO / classifier weights are NOT bundled. Headline audit numbers in
+  results/audit/ are pre-computed; reproduce.py re-executes backtests where noted.
+
+--------------------------------------------------------------------------------
+5. WHAT IS EXCLUDED (BY DESIGN)
+--------------------------------------------------------------------------------
+
+  See doc/GITHUB_UPLOAD_EXCLUSIONS.md
+
+  - Internal advisor meeting notes
+  - Manuscript PDFs
+  - Experimental phase-2 ablation logs
+  - Large CSV / model checkpoints
+
+--------------------------------------------------------------------------------
+6. ANONYMITY NOTE
+--------------------------------------------------------------------------------
+
+  If you received an anonymous GitHub mirror (anonymous.4open.science), use this
+  ZIP or that link interchangeably — contents match the reviewer release branch.
+
+  Do not attempt to de-anonymize authors from commit metadata in public forks;
+  this bundle is supplied for reproducibility audit only.
+
+--------------------------------------------------------------------------------
+Questions: refer to doc/REVIEWER_INDEX.md and doc/Response_Letter_v2_english.md

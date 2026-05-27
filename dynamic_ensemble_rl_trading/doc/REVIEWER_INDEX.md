@@ -4,6 +4,8 @@
 **Manuscript ID:** ESWA-D-26-08980  
 **One-command reproduction:** `python reproduce.py`
 
+**Offline bundle:** unzip `ESWA-D-26-08980_reviewer_code.zip` (build via `python scripts/package_reviewer_bundle.py`) and open [`REVIEWER_QUICKSTART.txt`](../REVIEWER_QUICKSTART.txt) at the archive root.
+
 This index lists the **minimum set of artefacts** intended for ESWA reviewers. Internal meeting notes, draft PDFs, and experimental phase reports are **not** included in this repository.
 
 ---
