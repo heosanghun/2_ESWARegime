@@ -78,4 +78,4 @@ Data: OHLCV via `scripts/download_hourly_data.py`; news CSV via paper Google Dri
 
 ## What is intentionally excluded
 
-See [`doc/GITHUB_업로드_제외_목록.md`](GITHUB_업로드_제외_목록.md). Large CSV data, trained model weights, internal meeting notes, manuscript PDFs, and experimental phase-2 ablation logs are excluded to keep the repository focused on **reproducible audit evidence**.
+See [`doc/GITHUB_UPLOAD_EXCLUSIONS.md`](GITHUB_UPLOAD_EXCLUSIONS.md). Large CSV data, trained model weights, internal meeting notes, manuscript PDFs, and experimental phase-2 ablation logs are excluded to keep the repository focused on **reproducible audit evidence**.

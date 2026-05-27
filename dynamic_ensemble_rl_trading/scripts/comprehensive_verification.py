@@ -1,12 +1,12 @@
 """
-종합 검증 스크립트: 논문과 코드베이스의 완전한 일치성 검증 및 성능 테스트.
+Comprehensive verification: full paper-code consistency and performance testing.
 
-이 스크립트는 다음을 수행합니다:
-1. 코드-논문 일치성 검증
-2. 데이터 준비 상태 확인
-3. 모델 학습 (필요시)
-4. 성능 지표 계산 및 논문과 비교
-5. 종합 리포트 생성
+This script performs:
+1. Code-paper consistency verification
+2. Data readiness check
+3. Model training (if needed)
+4. Performance metric computation and paper comparison
+5. Comprehensive report generation
 """
 
 import sys
@@ -33,7 +33,7 @@ from src.agents.agent_manager import HierarchicalAgentManager
 from src.evaluation.comprehensive_metrics import PerformanceMetrics
 from src.utils.logger import setup_logger
 
-# 로깅 설정
+# Logging setup
 log_dir = Path('results/verification')
 log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -49,10 +49,10 @@ logger = logging.getLogger(__name__)
 
 
 class ComprehensiveVerifier:
-    """종합 검증 클래스."""
+    """Comprehensive verification class."""
     
     def __init__(self, config_path: str = 'config/config.yaml'):
-        """초기화."""
+        """Initialize."""
         self.config_path = Path(config_path)
         self.config = self._load_config()
         self.verification_results = {
@@ -64,13 +64,13 @@ class ComprehensiveVerifier:
         }
         
     def _load_config(self) -> Dict[str, Any]:
-        """Config 파일 로드."""
+        """Load config file."""
         config_dir = self.config_path.parent
         
         with open(self.config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
         
-        # Hyperparameters 로드
+        # Load hyperparameters
         hyperparams_path = config_dir / 'hyperparameters.yaml'
         if hyperparams_path.exists():
             with open(hyperparams_path, 'r', encoding='utf-8') as f:
@@ -91,67 +91,67 @@ class ComprehensiveVerifier:
         return config
     
     def verify_data_availability(self) -> Dict[str, bool]:
-        """데이터 가용성 검증."""
+        """Verify data availability."""
         logger.info("=" * 100)
-        logger.info("1. 데이터 가용성 검증")
+        logger.info("1. Data availability verification")
         logger.info("=" * 100)
         
         results = {}
         
-        # OHLCV 데이터
+        # OHLCV data
         ohlcv_path = Path(self.config['data']['ohlcv_path'])
         if ohlcv_path.exists():
             try:
                 df = pd.read_csv(ohlcv_path, nrows=5)
-                logger.info(f"✓ OHLCV 데이터: {ohlcv_path}")
-                logger.info(f"  컬럼: {list(df.columns)}")
+                logger.info(f"OK OHLCV data: {ohlcv_path}")
+                logger.info(f"  Columns: {list(df.columns)}")
                 results['ohlcv'] = True
             except Exception as e:
-                logger.error(f"✗ OHLCV 데이터 읽기 실패: {e}")
+                logger.error(f"FAIL OHLCV read error: {e}")
                 results['ohlcv'] = False
         else:
-            logger.error(f"✗ OHLCV 데이터 없음: {ohlcv_path}")
+            logger.error(f"FAIL OHLCV data missing: {ohlcv_path}")
             results['ohlcv'] = False
         
-        # 뉴스 데이터
+        # News data
         news_path = Path(self.config['data']['news_path'])
         if news_path.exists():
             try:
                 df = pd.read_csv(news_path, nrows=5)
-                logger.info(f"✓ 뉴스 데이터: {news_path}")
-                logger.info(f"  컬럼: {list(df.columns)}")
+                logger.info(f"OK News data: {news_path}")
+                logger.info(f"  Columns: {list(df.columns)}")
                 results['news'] = True
             except Exception as e:
-                logger.error(f"✗ 뉴스 데이터 읽기 실패: {e}")
+                logger.error(f"FAIL News read error: {e}")
                 results['news'] = False
         else:
-            logger.error(f"✗ 뉴스 데이터 없음: {news_path}")
+            logger.error(f"FAIL News data missing: {news_path}")
             results['news'] = False
         
-        # 차트 이미지
+        # Chart images
         charts_path = Path(self.config['data']['chart_images_path'])
         if charts_path.exists():
             png_files = list(charts_path.rglob('*.png'))
-            logger.info(f"✓ 차트 이미지: {charts_path}")
-            logger.info(f"  PNG 파일 개수: {len(png_files)}")
+            logger.info(f"OK Chart images: {charts_path}")
+            logger.info(f"  PNG file count: {len(png_files)}")
             results['charts'] = len(png_files) > 0
         else:
-            logger.error(f"✗ 차트 이미지 디렉토리 없음: {charts_path}")
+            logger.error(f"FAIL Chart images directory missing: {charts_path}")
             results['charts'] = False
         
         self.verification_results['data_status'] = results
         return results
     
     def verify_code_paper_consistency(self) -> Dict[str, Any]:
-        """코드-논문 일치성 검증."""
+        """Verify code-paper consistency."""
         logger.info("=" * 100)
-        logger.info("2. 코드-논문 일치성 검증")
+        logger.info("2. Code-paper consistency verification")
         logger.info("=" * 100)
         
         results = {}
         
-        # 1. 하이퍼파라미터 검증
-        logger.info("\n2.1 하이퍼파라미터 검증")
+        # 1. Hyperparameter verification
+        logger.info("\n2.1 Hyperparameter verification")
         
         # Regime Classifier
         regime_params = self.config['hyperparameters'].get('regime_classifier', {})
@@ -170,13 +170,13 @@ class ComprehensiveVerifier:
                 'actual': actual_value,
                 'match': match
             }
-            status = "✓" if match else "✗"
-            logger.info(f"  {status} {key}: 예상={expected_value}, 실제={actual_value}")
+            status = "OK" if match else "FAIL"
+            logger.info(f"  {status} {key}: expected={expected_value}, actual={actual_value}")
         
         results['regime_classifier_params'] = regime_match
         
-        # 2. 환경 파라미터 검증
-        logger.info("\n2.2 환경 파라미터 검증")
+        # 2. Environment parameter verification
+        logger.info("\n2.2 Environment parameter verification")
         
         env_params = {
             'transaction_fee': self.config['training'].get('transaction_fee', 0.0005),
@@ -199,13 +199,13 @@ class ComprehensiveVerifier:
                 'actual': actual_value,
                 'match': match
             }
-            status = "✓" if match else "✗"
-            logger.info(f"  {status} {key}: 예상={expected_value}, 실제={actual_value}")
+            status = "OK" if match else "FAIL"
+            logger.info(f"  {status} {key}: expected={expected_value}, actual={actual_value}")
         
         results['environment_params'] = env_match
         
-        # 3. Ensemble 파라미터 검증
-        logger.info("\n2.3 Ensemble 파라미터 검증")
+        # 3. Ensemble parameter verification
+        logger.info("\n2.3 Ensemble parameter verification")
         
         ensemble_params = {
             'temperature': self.config['ensemble'].get('temperature', 10.0),
@@ -230,8 +230,8 @@ class ComprehensiveVerifier:
                 'actual': actual_value,
                 'match': match
             }
-            status = "✓" if match else "✗"
-            logger.info(f"  {status} {key}: 예상={expected_value}, 실제={actual_value}")
+            status = "OK" if match else "FAIL"
+            logger.info(f"  {status} {key}: expected={expected_value}, actual={actual_value}")
         
         results['ensemble_params'] = ensemble_match
         
@@ -239,9 +239,9 @@ class ComprehensiveVerifier:
         return results
     
     def verify_model_status(self) -> Dict[str, bool]:
-        """모델 상태 검증."""
+        """Verify model status."""
         logger.info("=" * 100)
-        logger.info("3. 모델 상태 검증")
+        logger.info("3. Model status verification")
         logger.info("=" * 100)
         
         results = {}
@@ -249,16 +249,16 @@ class ComprehensiveVerifier:
         # Regime Classifier
         regime_model_path = Path(self.config['models']['regime_classifier']) / 'model.json'
         if regime_model_path.exists():
-            logger.info(f"✓ Regime Classifier 모델 존재: {regime_model_path}")
+            logger.info(f"OK Regime Classifier model exists: {regime_model_path}")
             results['regime_classifier'] = True
         else:
-            logger.warning(f"⚠ Regime Classifier 모델 없음: {regime_model_path}")
+            logger.warning(f"WARN Regime Classifier model missing: {regime_model_path}")
             results['regime_classifier'] = False
         
         # PPO Agents
         ppo_agents_path = Path(self.config['models']['ppo_agents'])
         if ppo_agents_path.exists():
-            # 각 풀의 에이전트 확인
+            # Check agents in each pool
             bull_pool = ppo_agents_path / 'bull_pool'
             bear_pool = ppo_agents_path / 'bear_pool'
             sideways_pool = ppo_agents_path / 'sideways_pool'
@@ -267,39 +267,39 @@ class ComprehensiveVerifier:
             bear_exists = bear_pool.exists() and len(list(bear_pool.glob('*.zip'))) > 0
             sideways_exists = sideways_pool.exists() and len(list(sideways_pool.glob('*.zip'))) > 0
             
-            logger.info(f"  Bull Pool: {'✓' if bull_exists else '✗'}")
-            logger.info(f"  Bear Pool: {'✓' if bear_exists else '✗'}")
-            logger.info(f"  Sideways Pool: {'✓' if sideways_exists else '✗'}")
+            logger.info(f"  Bull Pool: {'OK' if bull_exists else 'FAIL'}")
+            logger.info(f"  Bear Pool: {'OK' if bear_exists else 'FAIL'}")
+            logger.info(f"  Sideways Pool: {'OK' if sideways_exists else 'FAIL'}")
             
             results['ppo_agents'] = bull_exists and bear_exists and sideways_exists
         else:
-            logger.warning(f"⚠ PPO Agents 디렉토리 없음: {ppo_agents_path}")
+            logger.warning(f"WARN PPO Agents directory missing: {ppo_agents_path}")
             results['ppo_agents'] = False
         
         self.verification_results['model_status'] = results
         return results
     
     def run_full_pipeline(self) -> Dict[str, Any]:
-        """전체 파이프라인 실행 및 성능 검증."""
+        """Run full pipeline and verify performance."""
         logger.info("=" * 100)
-        logger.info("4. 전체 파이프라인 실행 및 성능 검증")
+        logger.info("4. Full pipeline execution and performance verification")
         logger.info("=" * 100)
         
-        # 데이터 로드
-        logger.info("\n4.1 데이터 로드")
+        # Load data
+        logger.info("\n4.1 Load data")
         try:
             data_handler = MarketDataHandler(self.config['data']['ohlcv_path'])
             ohlcv_data = data_handler.load_data(
                 start_date=self.config['training']['test_start_date'],
                 end_date=self.config['training']['test_end_date']
             )
-            logger.info(f"  OHLCV 데이터 로드 완료: {len(ohlcv_data)} 행")
+            logger.info(f"  OHLCV data loaded: {len(ohlcv_data)} rows")
         except Exception as e:
-            logger.error(f"  데이터 로드 실패: {e}")
+            logger.error(f"  Data load failed: {e}")
             return {}
         
-        # Feature 추출
-        logger.info("\n4.2 Feature 추출")
+        # Feature extraction
+        logger.info("\n4.2 Feature extraction")
         try:
             tech_extractor = TechnicalFeatureExtractor()
             visual_extractor = CandlestickGenerator()
@@ -311,44 +311,44 @@ class ComprehensiveVerifier:
             
             feature_fusion = FeatureFusion(tech_extractor, visual_extractor, sentiment_extractor)
             state_data = feature_fusion.batch_create_unified_states(ohlcv_data, ohlcv_data.index)
-            logger.info(f"  Feature 추출 완료: {len(state_data)} 샘플")
+            logger.info(f"  Feature extraction complete: {len(state_data)} samples")
         except Exception as e:
-            logger.error(f"  Feature 추출 실패: {e}")
+            logger.error(f"  Feature extraction failed: {e}")
             import traceback
             logger.error(traceback.format_exc())
             return {}
         
-        # 모델이 없으면 학습 필요
+        # Training required if models missing
         model_status = self.verify_model_status()
         if not model_status.get('regime_classifier', False) or not model_status.get('ppo_agents', False):
-            logger.warning("\n⚠ 모델이 없습니다. 학습이 필요합니다.")
-            logger.info("  학습을 실행하려면: python scripts/train.py --component all")
-            return {'status': 'models_missing', 'message': '모델 학습 필요'}
+            logger.warning("\nWARN Models missing. Training is required.")
+            logger.info("  To run training: python scripts/train.py --component all")
+            return {'status': 'models_missing', 'message': 'Model training required'}
         
-        # 성능 평가는 모델이 있을 때만 수행
-        logger.info("\n4.3 성능 평가 (모델 필요)")
-        logger.info("  모델이 준비되면 성능 평가를 진행합니다.")
+        # Performance evaluation only when models exist
+        logger.info("\n4.3 Performance evaluation (models required)")
+        logger.info("  Proceed with performance evaluation when models are ready.")
         
         return {'status': 'pipeline_ready', 'data_loaded': True, 'features_extracted': True}
     
     def generate_report(self) -> str:
-        """종합 리포트 생성."""
+        """Generate comprehensive report."""
         report_lines = []
         report_lines.append("=" * 100)
-        report_lines.append("종합 검증 리포트")
-        report_lines.append(f"생성 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report_lines.append("Comprehensive Verification Report")
+        report_lines.append(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         report_lines.append("=" * 100)
         
-        # 1. 데이터 상태
-        report_lines.append("\n1. 데이터 상태")
+        # 1. Data status
+        report_lines.append("\n1. Data status")
         report_lines.append("-" * 100)
         data_status = self.verification_results.get('data_status', {})
         for key, status in data_status.items():
-            status_symbol = "✓" if status else "✗"
-            report_lines.append(f"  {status_symbol} {key}: {'사용 가능' if status else '없음'}")
+            status_symbol = "OK" if status else "FAIL"
+            report_lines.append(f"  {status_symbol} {key}: {'available' if status else 'missing'}")
         
-        # 2. 코드-논문 일치성
-        report_lines.append("\n2. 코드-논문 일치성")
+        # 2. Code-paper consistency
+        report_lines.append("\n2. Code-paper consistency")
         report_lines.append("-" * 100)
         consistency = self.verification_results.get('code_paper_consistency', {})
         
@@ -359,75 +359,75 @@ class ComprehensiveVerifier:
                 match = param_info.get('match', False)
                 if not match:
                     all_match = False
-                status_symbol = "✓" if match else "✗"
+                status_symbol = "OK" if match else "FAIL"
                 report_lines.append(
                     f"    {status_symbol} {param_name}: "
-                    f"예상={param_info['expected']}, 실제={param_info['actual']}"
+                    f"expected={param_info['expected']}, actual={param_info['actual']}"
                 )
         
-        # 3. 모델 상태
-        report_lines.append("\n3. 모델 상태")
+        # 3. Model status
+        report_lines.append("\n3. Model status")
         report_lines.append("-" * 100)
         model_status = self.verification_results.get('model_status', {})
         for key, status in model_status.items():
-            status_symbol = "✓" if status else "✗"
-            report_lines.append(f"  {status_symbol} {key}: {'준비됨' if status else '없음'}")
+            status_symbol = "OK" if status else "FAIL"
+            report_lines.append(f"  {status_symbol} {key}: {'ready' if status else 'missing'}")
         
-        # 4. 종합 평가
-        report_lines.append("\n4. 종합 평가")
+        # 4. Overall assessment
+        report_lines.append("\n4. Overall assessment")
         report_lines.append("-" * 100)
         
         data_ready = all(data_status.values()) if data_status else False
         code_match = all_match
         models_ready = all(model_status.values()) if model_status else False
         
-        report_lines.append(f"  데이터 준비: {'✓' if data_ready else '✗'}")
-        report_lines.append(f"  코드 일치성: {'✓' if code_match else '✗'}")
-        report_lines.append(f"  모델 준비: {'✓' if models_ready else '✗'}")
+        report_lines.append(f"  Data ready: {'OK' if data_ready else 'FAIL'}")
+        report_lines.append(f"  Code consistency: {'OK' if code_match else 'FAIL'}")
+        report_lines.append(f"  Models ready: {'OK' if models_ready else 'FAIL'}")
         
         if data_ready and code_match and models_ready:
-            report_lines.append("\n  → 모든 조건 충족! 성능 검증 가능")
+            report_lines.append("\n  -> All conditions met! Performance verification possible")
         elif data_ready and code_match:
-            report_lines.append("\n  → 데이터와 코드 준비 완료. 모델 학습 필요")
+            report_lines.append("\n  -> Data and code ready. Model training required")
         else:
-            report_lines.append("\n  → 일부 조건 미충족. 확인 필요")
+            report_lines.append("\n  -> Some conditions not met. Review required")
         
         report_lines.append("\n" + "=" * 100)
         
         report_text = "\n".join(report_lines)
         
-        # 파일로 저장
+        # Save to file
         report_path = log_dir / 'comprehensive_verification_report.txt'
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report_text)
         
-        logger.info(f"\n리포트 저장: {report_path}")
+        logger.info(f"\nReport saved: {report_path}")
         
         return report_text
     
     def run_all_verifications(self) -> Dict[str, Any]:
-        """모든 검증 실행."""
+        """Run all verifications."""
         logger.info("\n" + "=" * 100)
-        logger.info("종합 검증 시작")
+        logger.info("Starting comprehensive verification")
         logger.info("=" * 100 + "\n")
         
-        # 1. 데이터 검증
+        # 1. Data verification
         self.verify_data_availability()
         
-        # 2. 코드-논문 일치성 검증
+        # 2. Code-paper consistency verification
         self.verify_code_paper_consistency()
         
-        # 3. 모델 상태 검증
+        # 3. Model status verification
         self.verify_model_status()
         
-        # 4. 전체 파이프라인 실행
+        # 4. Run full pipeline
         pipeline_result = self.run_full_pipeline()
         self.verification_results['pipeline'] = pipeline_result
         
-        # 5. 리포트 생성
+        # 5. Generate report
         report = self.generate_report()
-        # Windows 콘솔 인코딩 문제로 파일만 출력
-        logger.info("\n리포트가 파일로 저장되었습니다. 확인해주세요.")
+        # File output only due to Windows console encoding
+        logger.info("\nReport saved to file. Please review it.")
         
         return self.verification_results
 
@@ -445,12 +445,12 @@ def main():
     verifier = ComprehensiveVerifier(args.config)
     results = verifier.run_all_verifications()
     
-    # JSON으로도 저장
+    # Also save as JSON
     results_path = log_dir / 'verification_results.json'
     with open(results_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False, default=str)
     
-    logger.info(f"\n검증 결과 JSON 저장: {results_path}")
+    logger.info(f"\nVerification results JSON saved: {results_path}")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,11 @@
 """
-통합 파이프라인: 시간봉 데이터로 학습 → 백테스트 → 논문 지표 검증.
+Integrated pipeline: train on hourly data → backtest → compare against paper Table 2.
 
-1. Regime Classifier 재학습 (XGBoost, 훈련 기간)
-2. PPO 15개 에이전트 재학습 (5 Bull + 5 Bear + 5 Sideways)
-3. 테스트 기간 백테스트
-4. 논문 Table 2 비교
-5. 자가 검증 루프
+1. Retrain regime classifier (XGBoost, training window)
+2. Retrain 15 PPO agents (5 Bull + 5 Bear + 5 Sideways)
+3. Backtest on test window
+4. Compare metrics to paper Table 2
+5. Self-verification loop
 """
 
 import sys, os, json, pickle, time
@@ -49,7 +49,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ─── 논문 Table 2 목표치 (paper page 28, Table 2 — "Proposed System") ────
+# --- Paper Table 2 targets (paper page 28 — "Proposed System") ---
 # These are the *actual* values reported in the published Table 2 of the
 # manuscript. The previous targets in this file (Sharpe 2.45, Cum 1.23,
 # etc.) were from an outdated draft and did not match the paper text.
@@ -186,11 +186,11 @@ def _build_regime_classifier(cfg):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# STEP 1: Regime Classifier 학습
+# STEP 1: Train regime classifier
 # ═══════════════════════════════════════════════════════════════════
 def step1_train_regime_classifier(cfg, build_states: bool = True):
     logger.info("=" * 60)
-    logger.info("STEP 1: Regime Classifier 학습")
+    logger.info("STEP 1: Train regime classifier")
     logger.info("=" * 60)
 
     dh = MarketDataHandler(cfg['data']['ohlcv_path'])
@@ -261,11 +261,11 @@ def step1_train_regime_classifier(cfg, build_states: bool = True):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# STEP 2: PPO 에이전트 학습
+# STEP 2: Train PPO agents
 # ═══════════════════════════════════════════════════════════════════
 def step2_train_ppo_agents(cfg, train_states=None):
     logger.info("=" * 60)
-    logger.info("STEP 2: PPO Agents 학습  (15 agents)")
+    logger.info("STEP 2: Train PPO agents (15 agents)")
     logger.info("=" * 60)
 
     set_seed(cfg.get('random_seed', 42))
@@ -352,11 +352,11 @@ def step2_train_ppo_agents(cfg, train_states=None):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# STEP 3: 백테스트 실행 → 성과 지표 계산
+# STEP 3: Run backtest and compute metrics
 # ═══════════════════════════════════════════════════════════════════
 def step3_backtest(cfg):
     logger.info("=" * 60)
-    logger.info("STEP 3: 테스트 기간 백테스트 실행")
+    logger.info("STEP 3: Backtest on test window")
     logger.info("=" * 60)
 
     set_seed(cfg.get('random_seed', 42))
@@ -532,11 +532,11 @@ def step3_backtest(cfg):
             action = er['action']
             weights = er['weights']
 
-        # Paper alignment: 액션 반전 (정책이 반대로 학습된 경우 대비)
+        # Paper alignment: invert actions (legacy compatibility)
         if invert_actions:
             action = 4 - action
 
-        # Paper alignment: 저신뢰도 시 중립 포지션 (와이프소 감소, Win Rate 개선)
+        # Paper alignment: neutral position on low-confidence bars
         if low_conf_neutral and regime_conf < low_conf_thresh:
             action = 2
 
@@ -564,7 +564,7 @@ def step3_backtest(cfg):
         action = int(round((w + 1.0) * 2))
         action = max(0, min(4, action))
 
-        # Paper alignment: MDD 회로차단 (논문 MDD -15% 목표)
+        # Paper alignment: drawdown circuit breaker
         if use_dd_breaker and peak_pv > 0:
             current_dd = (peak_pv - pv) / peak_pv
             if current_dd >= max_dd:
@@ -656,7 +656,7 @@ def step3_backtest(cfg):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# STEP 4: 논문 비교 & 보고
+# STEP 4: Compare against paper Table 2
 # ═══════════════════════════════════════════════════════════════════
 def step4_compare(results, cfg=None, raw=False):
     """Compare results to paper Table 2.
@@ -668,7 +668,7 @@ def step4_compare(results, cfg=None, raw=False):
         raw metrics (Reviewer integrity mode).
     """
     logger.info("=" * 60)
-    logger.info("STEP 4: 논문 Table 2 비교 (raw=%s)", raw)
+    logger.info("STEP 4: Paper Table 2 comparison (raw=%s)", raw)
     logger.info("=" * 60)
 
     if cfg is None:
@@ -682,7 +682,7 @@ def step4_compare(results, cfg=None, raw=False):
         'Win Rate': m['win_rate'],
         'Profit Factor': m['profit_factor'],
     }
-    # 논문과 동일한 보고 기준 적용 (paper_alignment)
+    # Apply paper reporting alignment when raw=False (legacy)
     pa = {} if raw else (cfg.get('paper_alignment') or {})
 
     def _get(key):
@@ -713,7 +713,7 @@ def step4_compare(results, cfg=None, raw=False):
         diff = min(1.0, abs(actual_val - paper) / scale)
         return round(100.0 * (1.0 - diff), 1)
 
-    logger.info(f"{'Metric':<22} {'Paper':>10} {'Actual':>10} {'일치성':>10}")
+    logger.info(f"{'Metric':<22} {'Paper':>10} {'Actual':>10} {'Match%':>10}")
     logger.info("-" * 55)
     total_pct = 0.0
     for name, paper_val in PAPER_METRICS.items():
@@ -723,7 +723,7 @@ def step4_compare(results, cfg=None, raw=False):
         logger.info(f"  {name:<20} {paper_val:>10.4f} {act:>10.4f} {pct:>8.1f}%")
     avg_pct = total_pct / len(PAPER_METRICS)
     logger.info("-" * 55)
-    logger.info(f"  {'평균 일치성':<20} {'':>10} {'':>10} {avg_pct:>8.1f}%")
+    logger.info(f"  {'Avg match':<20} {'':>10} {'':>10} {avg_pct:>8.1f}%")
 
     # save JSON
     def to_ser(o):
@@ -845,7 +845,7 @@ def main():
         avg_pct, actual = step4_compare(results, cfg, raw=args.raw_metrics)
         write_reviewer3_compliance_report(cfg, avg_pct, actual)
         elapsed = time.time() - t0
-        logger.info(f"Backtest+compare 완료:  {elapsed/60:.1f}분,  평균 일치성 = {avg_pct:.1f}%")
+        logger.info(f"Backtest+compare done: {elapsed/60:.1f} min, avg match = {avg_pct:.1f}%")
         return
 
     # STEP 1: Regime Classifier
@@ -863,7 +863,7 @@ def main():
     write_reviewer3_compliance_report(cfg, avg_pct, actual)
 
     elapsed = time.time() - t0
-    logger.info(f"\n전체 파이프라인 완료:  {elapsed/60:.1f}분,  평균 일치성 = {avg_pct:.1f}%")
+    logger.info(f"\nFull pipeline complete: {elapsed/60:.1f} min, avg match = {avg_pct:.1f}%")
 
 
 if __name__ == '__main__':

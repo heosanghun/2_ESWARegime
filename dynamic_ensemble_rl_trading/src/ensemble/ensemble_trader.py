@@ -1,7 +1,7 @@
 """
 Ensemble decision making module.
 
-각 에이전트의 성능을 추적하여 Dynamic Weighting이 제대로 작동하도록 수정.
+Tracks per-agent performance so dynamic weighting operates correctly.
 """
 
 import numpy as np
@@ -18,7 +18,7 @@ class EnsembleTrader:
     """
     Ensemble trader that aggregates policies from agent pool.
     
-    각 에이전트의 가상 포트폴리오를 추적하여 Dynamic Weighting이 작동하도록 개선.
+    Tracks virtual portfolios per agent so dynamic weighting can operate.
     """
 
     def __init__(
@@ -33,10 +33,10 @@ class EnsembleTrader:
         self.temperature = temperature
         self.initial_capital = initial_capital
         
-        # 각 에이전트의 가상 포트폴리오 추적
+        # Virtual portfolio tracking per agent
         self.agent_portfolio_values: Dict[int, List[float]] = {}
         self.agent_returns: Dict[int, List[float]] = {}
-        self.agent_actions: Dict[int, List[int]] = {}  # 각 에이전트가 제안한 액션 기록
+        self.agent_actions: Dict[int, List[int]] = {}  # Record each agent's proposed action
     
     def initialize_agents(self, num_agents: int) -> None:
         """Initialize tracking for agents."""
@@ -80,10 +80,9 @@ class EnsembleTrader:
         transaction_cost: float = 0.0007
     ) -> None:
         """
-        모든 에이전트의 가상 포트폴리오를 가격 변동으로 업데이트.
-        
-        이전 스텝의 액션으로 포트폴리오를 업데이트합니다.
-        (현재 스텝의 액션은 아직 기록되지 않은 상태)
+        Update every agent's virtual portfolio from a price move.
+
+        Uses the previous step's action (the current step's action is not recorded yet).
         """
         # Action → weight mapping (Long-Short, matches paper Section 3.1).
         # If the surrounding environment is configured as long-only via
@@ -100,21 +99,21 @@ class EnsembleTrader:
             if prev_pv <= 0:
                 continue
             
-            # 이전 스텝의 액션 사용 (마지막 액션)
+            # Use the previous step's action (most recent recorded action)
             prev_action = self.agent_actions[agent_idx][-1]
             prev_weight = WEIGHT_MAP.get(prev_action, 0.5)
             
-            # 이전 이전 스텝의 weight (거래 비용 계산용)
+            # Prior-step weight (for transaction cost)
             prev_prev_weight = 0.0
             if len(self.agent_actions[agent_idx]) > 1:
                 prev_prev_action = self.agent_actions[agent_idx][-2]
                 prev_prev_weight = WEIGHT_MAP.get(prev_prev_action, 0.5)
             
-            # Weight 변화에 따른 거래 비용 (이전 스텝에서 발생한 거래)
+            # Transaction cost from weight change in the previous step
             weight_change = abs(prev_weight - prev_prev_weight)
             txn_cost = transaction_cost * weight_change
             
-            # 포트폴리오 수익률 = prev_weight * price_change - txn_cost
+            # Portfolio return = prev_weight * price_change - txn_cost
             portfolio_return = prev_weight * price_change - txn_cost
             
             new_pv = prev_pv * (1 + portfolio_return)
@@ -122,7 +121,7 @@ class EnsembleTrader:
             
             self.agent_portfolio_values[agent_idx].append(new_pv)
             
-            # Return 계산
+            # Record return
             if prev_pv > 0:
                 return_value = (new_pv - prev_pv) / prev_pv
                 self.agent_returns[agent_idx].append(return_value)
@@ -136,7 +135,7 @@ class EnsembleTrader:
         """
         Get ensemble action from active pool.
         
-        각 에이전트의 액션을 기록하여 나중에 성능 추적에 사용.
+        Record each agent's action for later performance tracking.
         """
         pool_output = active_pool.get_pool_actions(state, return_probs=True)
         
@@ -144,20 +143,20 @@ class EnsembleTrader:
         individual_actions = pool_output['actions']
         num_agents = len(individual_probs)
         
-        # 각 에이전트의 액션 기록
+        # Record per-agent actions
         for i, action in enumerate(individual_actions):
             if i not in self.agent_actions:
                 self.agent_actions[i] = []
             self.agent_actions[i].append(int(action))
         
-        # Dynamic weights 계산
+        # Compute dynamic weights
         weights = self.weight_calculator.calculate_weights()
         
         if len(weights) != num_agents:
             self.weight_calculator.initialize_agents(num_agents)
             weights = self.weight_calculator.calculate_weights()
         
-        # 초기에는 균등 가중치 (데이터 부족 시)
+        # Equal weights when insufficient history
         if all(w == weights[0] for w in weights) and len(self.agent_returns.get(0, [])) < 2:
             weights = np.ones(num_agents) / num_agents
         

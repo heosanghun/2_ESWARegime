@@ -1,7 +1,7 @@
 """
 Download hourly BTC/USDT OHLCV data from Binance via ccxt.
 
-Period: 2021-10-12 to 2023-12-19 (논문과 동일)
+Period: 2021-10-12 to 2023-12-19 (same as paper)
 Frequency: 1H (hourly)
 """
 

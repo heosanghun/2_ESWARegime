@@ -96,8 +96,8 @@ jobs:
           python - <<'PY'
           import sys, pathlib
           text = pathlib.Path("README.md").read_text(encoding="utf-8")
-          if "Honesty Statement" not in text and "정직성 선언" not in text:
-              print("[FAIL] README.md missing Honesty Statement / 정직성 선언.")
+          if "Honesty Statement" not in text:
+              print("[FAIL] README.md missing Honesty Statement.")
               sys.exit(1)
           print("[OK] README.md contains the Honesty Statement.")
           PY

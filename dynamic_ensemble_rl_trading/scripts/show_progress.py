@@ -1,6 +1,7 @@
 """
-학습/검증 파이프라인 진행률 표시.
-train_and_verify.log 또는 터미널 로그를 파싱하여 진행률을 출력합니다.
+Display training/verification pipeline progress.
+
+Parses train_and_verify.log or terminal logs and outputs progress.
 """
 
 import re
@@ -10,7 +11,7 @@ from datetime import datetime
 LOG_PATH = Path(__file__).parent.parent / "results" / "verification" / "train_and_verify.log"
 PROGRESS_PATH = Path(__file__).parent.parent / "results" / "verification" / "progress.md"
 
-# 단계별 총 작업량
+# Total work per step
 STEP1_TASKS = 1          # Regime Classifier
 STEP2_POOLS = 3          # Bull, Bear, Sideways
 STEP2_AGENTS_PER_POOL = 5
@@ -90,30 +91,30 @@ def format_progress(info: dict) -> str:
     total = s["total_agents"]
 
     lines = [
-        "# 학습/검증 파이프라인 진행률",
+        "# Training/Verification Pipeline Progress",
         "",
-        f"**갱신 시각:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"**Updated at:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "",
-        "## 전체 단계",
-        "| 단계 | 내용 | 상태 |",
-        "|------|------|------|",
+        "## Overall steps",
+        "| Step | Description | Status |",
+        "|------|-------------|--------|",
     ]
 
     total = s["total_agents"]
     steps_desc = [
-        (1, "Regime Classifier 학습", step >= 1),
-        (2, "PPO Agents 학습 (15개)", step >= 2 and agents_done >= total),
-        (3, "테스트 기간 백테스트", step >= 3),
-        (4, "논문 Table 2 비교", step >= 4),
-        (5, "완료", step >= 5),
+        (1, "Regime Classifier training", step >= 1),
+        (2, "PPO Agents training (15)", step >= 2 and agents_done >= total),
+        (3, "Test period backtest", step >= 3),
+        (4, "Paper Table 2 comparison", step >= 4),
+        (5, "Complete", step >= 5),
     ]
     for n, desc, done in steps_desc:
-        status = "완료" if done else ("진행 중" if step == n else "대기")
+        status = "Complete" if done else ("In progress" if step == n else "Pending")
         lines.append(f"| {n} | {desc} | {status} |")
 
     lines.extend([
         "",
-        "## STEP 2 상세 (PPO Agents)",
+        "## STEP 2 detail (PPO Agents)",
         "",
     ])
 
@@ -122,21 +123,21 @@ def format_progress(info: dict) -> str:
         bar_len = 30
         filled = int(bar_len * agents_done / total) if total else 0
         bar = "#" * filled + "-" * (bar_len - filled)
-        lines.append(f"- **진행:** {agents_done}/{total} 에이전트 ({pct:.1f}%)")
+        lines.append(f"- **Progress:** {agents_done}/{total} agents ({pct:.1f}%)")
         lines.append(f"- `[{bar}]`")
-        lines.append(f"- **현재:** {s['phase']} — {s['detail']}")
+        lines.append(f"- **Current:** {s['phase']} — {s['detail']}")
         lines.append("")
-        # 예상 소요 (에이전트당 약 32분 가정)
+        # Estimated remaining time (~32 min per agent)
         if agents_done < total:
             remaining = total - agents_done
             est_min = remaining * 32
-            lines.append(f"- 예상 남은 시간: 약 {est_min}분 ({est_min/60:.1f}시간)")
+            lines.append(f"- Estimated time remaining: ~{est_min} min ({est_min/60:.1f} hours)")
     else:
-        lines.append("- 대기 중")
+        lines.append("- Pending")
 
     lines.append("")
     lines.append("---")
-    lines.append("*이 파일은 `scripts/show_progress.py` 실행 시 갱신됩니다.*")
+    lines.append("*This file is updated when `scripts/show_progress.py` is run.*")
     return "\n".join(lines)
 
 

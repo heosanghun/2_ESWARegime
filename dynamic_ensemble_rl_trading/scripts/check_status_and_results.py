@@ -1,6 +1,6 @@
 """
-진행중/완료 여부 + 논문 대비 결과값을 한 번에 확인.
-수동 확인 없이 이 스크립트만 실행하면 상태와 결과를 파악할 수 있음.
+Check in-progress/completed status and paper comparison results in one run.
+Run this script alone to see status and results without manual checks.
 """
 
 import json
@@ -15,14 +15,14 @@ OUT_PATH = BASE / "results" / "verification" / "status_and_results.txt"
 
 
 def get_training_status():
-    """로그 파싱: 진행중(1M run) vs 완료(전체 파이프라인 완료) vs 미실행."""
+    """Parse log: in progress (1M run) vs complete (full pipeline) vs not started."""
     if not LOG_PATH.exists():
-        return "미실행", 0, 15, ""
+        return "Not started", 0, 15, ""
 
     text = LOG_PATH.read_text(encoding="utf-8", errors="ignore")
     lines = text.strip().split("\n")
 
-    # 1M run 시작 라인
+    # 1M run start line
     start_idx = 0
     for i, line in enumerate(lines):
         if "1,000,000 timesteps" in line or "1000000 timesteps each" in line:
@@ -33,14 +33,14 @@ def get_training_status():
         if i >= start_idx and "PPO agent training completed" in line:
             agents_done += 1
 
-    if "Backtest+compare 완료" in text or "전체 파이프라인 완료" in text:
-        # 마지막 완료 메시지가 backtest-only인지 full인지
-        if "Backtest-only mode" in text and "Backtest+compare 완료" in text:
-            return "완료(백테스트만 실행됨)", 15, 15, ""
-        return "완료(전체 파이프라인)", 15, 15, ""
+    if "Backtest+compare done" in text or "Full pipeline complete" in text:
+        # Distinguish backtest-only vs full pipeline completion
+        if "Backtest-only mode" in text and "Backtest+compare done" in text:
+            return "Complete (backtest only)", 15, 15, ""
+        return "Complete (full pipeline)", 15, 15, ""
 
     if agents_done >= 15:
-        return "진행중(백테스트 단계)", 15, 15, ""
+        return "In progress (backtest phase)", 15, 15, ""
 
     pool = "Bull"
     detail = ""
@@ -53,11 +53,11 @@ def get_training_status():
             m = re.search(r"Training agent (\d+)/5", lines[i])
             if m:
                 detail = "{} {}/5".format(pool, m.group(1))
-    return "진행중(학습)", agents_done, 15, detail
+    return "In progress (training)", agents_done, 15, detail
 
 
 def get_results():
-    """metrics_vs_paper.json 읽기."""
+    """Read metrics_vs_paper.json."""
     if not METRICS_PATH.exists():
         return None
     with open(METRICS_PATH, "r", encoding="utf-8") as f:
@@ -70,25 +70,25 @@ def main():
 
     lines = []
     lines.append("=" * 60)
-    lines.append("상태 및 결과 요약 (갱신: {})".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    lines.append("Status and results summary (updated: {})".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     lines.append("=" * 60)
     lines.append("")
-    lines.append("[진행 상태]")
-    lines.append("  상태: {}".format(status))
-    if "진행중" in status and total:
-        lines.append("  PPO 에이전트: {}/{}".format(done, total))
+    lines.append("[Progress status]")
+    lines.append("  Status: {}".format(status))
+    if status.startswith("In progress") and total:
+        lines.append("  PPO agents: {}/{}".format(done, total))
         if detail:
-            lines.append("  현재: {}".format(detail))
+            lines.append("  Current: {}".format(detail))
     lines.append("")
-    lines.append("[논문 대비 결과]")
+    lines.append("[Results vs paper]")
     if results:
         act = results.get("actual_metrics", {})
         paper = results.get("paper_metrics", {})
         cons = results.get("consistency", {})
         avg = results.get("avg_consistency", 0)
-        lines.append("  평균 일치성: {:.1f}%".format(avg))
+        lines.append("  Average consistency: {:.1f}%".format(avg))
         lines.append("")
-        lines.append("  지표            논문(목표)    실제값      일치성(%)")
+        lines.append("  Metric            Paper(target)  Actual       Consistency(%)")
         lines.append("  " + "-" * 50)
         for k in ["Sharpe Ratio", "Cumulative Return", "CAGR", "Maximum Drawdown", "Win Rate", "Profit Factor"]:
             p = paper.get(k, 0)
@@ -102,9 +102,9 @@ def main():
                 a_str = str(a)
             lines.append("  {:18s} {:>10}   {:>10}   {:>6.1f}%".format(k[:18], str(p), a_str, c))
         lines.append("")
-        lines.append("  목표: 모든 지표 100% 일치 (논문 성과지표)")
+        lines.append("  Goal: 100% match on all metrics (paper performance)")
     else:
-        lines.append("  결과 없음 (백테스트 실행 후 생성됨)")
+        lines.append("  No results yet (generated after backtest run)")
     lines.append("")
     lines.append("=" * 60)
 
@@ -112,7 +112,7 @@ def main():
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(out_text, encoding="utf-8")
 
-    # 콘솔에는 ASCII 요약만 (인코딩 이슈 방지)
+    # ASCII summary on console (avoid encoding issues)
     print("Status:", status)
     if results:
         print("Avg consistency:", "{:.1f}%".format(results.get("avg_consistency", 0)))

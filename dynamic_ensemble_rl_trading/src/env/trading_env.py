@@ -122,7 +122,7 @@ class MultiRegimeTradingEnv(gym.Env):
             shape=(state_dim,), dtype=np.float32,
         )
 
-        # Reward calculator (시간봉 데이터용 스케일링)
+        # Reward calculator (hourly-bar scaling)
         self.reward_calculator = RegimeRewardCalculator(
             transaction_cost=self.transaction_fee,
             reward_scale=self.reward_scale

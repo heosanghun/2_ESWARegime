@@ -21,7 +21,7 @@
 | 3 | **between 2026-02-12 and 2026-05-15** | `paper_alignment` block **introduced** into `config/config.yaml` and `scripts/train_and_verify.py`. **Exact commit unknown without git.** | First snapshot containing the block is `config_backup_pre_reward_v2_1M.yaml` (2026-05-15) |
 | 4 | **2026-02-12 – 2026-05-14 (v1.x)** | `config.paper_alignment` **silently active** in submitted manuscript run; Table 2 reported numbers (Sharpe +1.89, CumRet +89.3%, WR +67.8%, PF +2.34, MDD −16.2%) generated under this layer. | `CHANGELOG.md` v1.x note: "**silently active** (action inversion, B&H blending, position scaling ×1.76, Sharpe capping)" |
 | 5 | **2026-05-15 11:32** | Last snapshot of pre-disclosure config: `config_backup_pre_reward_v2_1M.yaml`. All knobs already null/false at this point. | mtime 2026-05-15T11:32:01 |
-| 6 | **2026-05-15 16:14** | `README.md` — Honesty Statement added (정직성 선언). | mtime 2026-05-15T16:14:49 |
+| 6 | **2026-05-15 16:14** | `README.md` — Honesty Statement added. | mtime 2026-05-15T16:14:49 |
 | 7 | **2026-05-15 16:16** | `scripts/reach_100_percent_autonomous.py` — **DEPRECATED guard added** (refuses execution unless explicit `--i-understand-this-is-deprecated-…` flag). | mtime 2026-05-15T16:16:55 + inline comment header |
 | 8 | **2026-05-15 (v2.0.0)** | CHANGELOG v2.0.0 released — block "retained but disabled by default"; `--raw-metrics` switch documented; rebuttal §0 disclosure. | `CHANGELOG.md` v2.0.0 section |
 | 9 | **2026-05-19 (v2.0.1)** | Backtester long-short clip bug fix (`src/backtest/backtester.py`). | `CHANGELOG.md` v2.0.1 |

@@ -1,9 +1,9 @@
 ====================================================================================================
-논문 성능 지표 요약
+Manuscript performance metrics summary
 ====================================================================================================
 
-이 리포트는 논문에서 보고한 성능 지표를 요약합니다.
-실제 실행 결과와 비교하려면 --actual-results 옵션을 사용하세요.
+This report summarises performance metrics reported in the manuscript.
+Use --actual-results to compare against a live run.
 
 Proposed Method:
   sharpe_ratio: 1.8900

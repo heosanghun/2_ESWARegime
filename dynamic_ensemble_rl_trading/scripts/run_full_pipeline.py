@@ -1,7 +1,7 @@
 """
-전체 파이프라인 실행 스크립트: 데이터 생성 → 모델 학습 → 평가 → 검증
+Full pipeline script: data generation -> model training -> evaluation -> verification
 
-논문의 성능 지표 검증을 위한 전체 프로세스를 자동화합니다.
+Automates the full process for verifying paper performance metrics.
 """
 
 import sys
@@ -64,7 +64,7 @@ def load_config(config_path: str):
 def main():
     """Main execution function."""
     parser = argparse.ArgumentParser(
-        description='Run full pipeline: data generation → training → evaluation'
+        description='Run full pipeline: data generation -> training -> evaluation'
     )
     parser.add_argument(
         '--config',
@@ -91,7 +91,7 @@ def main():
     args = parser.parse_args()
     
     logger.info("=" * 100)
-    logger.info("전체 파이프라인 실행 시작")
+    logger.info("Starting full pipeline")
     logger.info("=" * 100)
     
     # Load config
@@ -100,7 +100,7 @@ def main():
     # Step 1: Generate data (if not skipped)
     if not args.skip_data:
         logger.info("\n" + "=" * 100)
-        logger.info("Step 1: 데이터 생성")
+        logger.info("Step 1: Data generation")
         logger.info("=" * 100)
         
         try:
@@ -117,61 +117,61 @@ def main():
                 output_path=config['data']['news_path']
             )
             
-            logger.info("데이터 생성 완료!")
+            logger.info("Data generation complete!")
         except Exception as e:
-            logger.error(f"데이터 생성 실패: {e}")
+            logger.error(f"Data generation failed: {e}")
             return
     else:
-        logger.info("데이터 생성 건너뛰기 (기존 데이터 사용)")
+        logger.info("Skipping data generation (using existing data)")
     
     # Step 2: Train models (if not skipped)
     if not args.skip_training:
         logger.info("\n" + "=" * 100)
-        logger.info("Step 2: 모델 학습")
+        logger.info("Step 2: Model training")
         logger.info("=" * 100)
         
         # Adjust timesteps for quick test
         if args.quick_test:
             original_timesteps = config['hyperparameters']['training']['total_timesteps']
             config['hyperparameters']['training']['total_timesteps'] = 10000
-            logger.info(f"빠른 테스트 모드: timesteps를 {original_timesteps}에서 10000으로 감소")
+            logger.info(f"Quick test mode: reduced timesteps from {original_timesteps} to 10000")
         
         try:
             # Train regime classifier
-            logger.info("Regime Classifier 학습 중...")
+            logger.info("Training Regime Classifier...")
             train_regime_classifier(config)
             
             # Train PPO agents
-            logger.info("PPO Agents 학습 중...")
+            logger.info("Training PPO Agents...")
             train_ppo_agents(config)
             
-            logger.info("모델 학습 완료!")
+            logger.info("Model training complete!")
         except Exception as e:
-            logger.error(f"모델 학습 실패: {e}")
+            logger.error(f"Model training failed: {e}")
             import traceback
             logger.error(traceback.format_exc())
             return
     else:
-        logger.info("모델 학습 건너뛰기 (기존 모델 사용)")
+        logger.info("Skipping model training (using existing models)")
     
     # Step 3: Run trading system and evaluation
     logger.info("\n" + "=" * 100)
-    logger.info("Step 3: 트레이딩 시스템 실행 및 평가")
+    logger.info("Step 3: Run trading system and evaluation")
     logger.info("=" * 100)
     
     try:
         # Run main trading system
         run_trading_system()
         
-        logger.info("트레이딩 시스템 실행 완료!")
+        logger.info("Trading system execution complete!")
     except Exception as e:
-        logger.error(f"트레이딩 시스템 실행 실패: {e}")
+        logger.error(f"Trading system execution failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return
     
     logger.info("\n" + "=" * 100)
-    logger.info("전체 파이프라인 완료!")
+    logger.info("Full pipeline complete!")
     logger.info("=" * 100)
 
 

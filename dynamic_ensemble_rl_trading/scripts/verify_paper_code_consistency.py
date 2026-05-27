@@ -1,11 +1,11 @@
 """
-논문-코드 일치성 및 데이터 존재 여부 종합 검증 스크립트.
+Comprehensive paper-code consistency and data existence verification.
 
-이 스크립트는:
-1. 논문에서 언급한 데이터가 실제로 존재하는지 확인
-2. 코드베이스가 논문의 방법론과 일치하는지 검증
-3. 하이퍼파라미터 일치성 확인
-4. 데이터 경로 및 형식 검증
+This script:
+1. Checks whether data mentioned in the paper actually exists
+2. Verifies the codebase matches the paper methodology
+3. Checks hyperparameter consistency
+4. Validates data paths and formats
 """
 
 import sys
@@ -34,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# 논문에서 언급한 데이터 스펙
+# Data specs mentioned in the paper
 PAPER_DATA_SPEC = {
     'ohlcv': {
         'asset': 'BTC/USDT',
@@ -60,7 +60,7 @@ PAPER_DATA_SPEC = {
     }
 }
 
-# 논문에서 언급한 하이퍼파라미터
+# Hyperparameters mentioned in the paper
 PAPER_HYPERPARAMETERS = {
     'regime_classifier': {
         'n_estimators': 100,
@@ -108,7 +108,7 @@ PAPER_HYPERPARAMETERS = {
 
 class PaperCodeConsistencyVerifier:
     """
-    논문-코드 일치성 및 데이터 검증기.
+    Paper-code consistency and data verifier.
     """
     
     def __init__(self, config_path: str = 'config/config.yaml'):
@@ -141,20 +141,20 @@ class PaperCodeConsistencyVerifier:
     
     def check_data_existence(self) -> Dict:
         """
-        논문에서 언급한 데이터 파일 존재 여부 확인.
+        Check whether data files mentioned in the paper exist.
         
         Returns
         -------
         dict
-            데이터 존재 여부 검증 결과.
+            Data existence verification results.
         """
         logger.info("=" * 100)
-        logger.info("데이터 존재 여부 검증")
+        logger.info("Data existence verification")
         logger.info("=" * 100)
         
         results = {}
         
-        # OHLCV 데이터 확인
+        # OHLCV data check
         ohlcv_path = self.base_path / PAPER_DATA_SPEC['ohlcv']['expected_path']
         results['ohlcv'] = {
             'expected_path': str(ohlcv_path),
@@ -176,12 +176,12 @@ class PaperCodeConsistencyVerifier:
         else:
             results['ohlcv']['has_ohlcv_columns'] = False
         
-        logger.info(f"OHLCV 데이터: {'✅ 존재' if results['ohlcv']['exists'] else '❌ 없음'}")
+        logger.info(f"OHLCV data: {'OK exists' if results['ohlcv']['exists'] else 'FAIL missing'}")
         if results['ohlcv']['exists']:
-            logger.info(f"  경로: {results['ohlcv']['expected_path']}")
-            logger.info(f"  크기: {results['ohlcv']['size']:,} bytes")
+            logger.info(f"  Path: {results['ohlcv']['expected_path']}")
+            logger.info(f"  Size: {results['ohlcv']['size']:,} bytes")
         
-        # 뉴스 데이터 확인
+        # News data check
         news_path = self.base_path / PAPER_DATA_SPEC['news']['expected_path']
         results['news'] = {
             'expected_path': str(news_path),
@@ -198,7 +198,7 @@ class PaperCodeConsistencyVerifier:
                 )
                 results['news']['sample_rows'] = len(df)
                 
-                # 전체 행 수 확인 (선택적)
+                # Check total row count (optional)
                 try:
                     total_rows = sum(1 for _ in open(news_path, 'r', encoding='utf-8')) - 1
                     results['news']['total_rows'] = total_rows
@@ -212,14 +212,14 @@ class PaperCodeConsistencyVerifier:
         else:
             results['news']['has_required_columns'] = False
         
-        logger.info(f"뉴스 데이터: {'✅ 존재' if results['news']['exists'] else '❌ 없음'}")
+        logger.info(f"News data: {'OK exists' if results['news']['exists'] else 'FAIL missing'}")
         if results['news']['exists']:
-            logger.info(f"  경로: {results['news']['expected_path']}")
-            logger.info(f"  크기: {results['news']['size']:,} bytes")
+            logger.info(f"  Path: {results['news']['expected_path']}")
+            logger.info(f"  Size: {results['news']['size']:,} bytes")
             if 'total_rows' in results['news'] and results['news']['total_rows']:
-                logger.info(f"  행 수: {results['news']['total_rows']:,} (논문: {PAPER_DATA_SPEC['news']['total_articles']:,})")
+                logger.info(f"  Rows: {results['news']['total_rows']:,} (paper: {PAPER_DATA_SPEC['news']['total_articles']:,})")
         
-        # 캔들스틱 이미지 데이터 확인
+        # Candlestick image data check
         charts_path = self.base_path / PAPER_DATA_SPEC['charts']['extracted_path']
         charts_zip = self.base_path / PAPER_DATA_SPEC['charts']['file']
         
@@ -243,34 +243,34 @@ class PaperCodeConsistencyVerifier:
             results['charts']['num_images'] = 0
             results['charts']['has_images'] = False
         
-        logger.info(f"캔들스틱 이미지: {'✅ 존재' if (results['charts']['extracted_exists'] or results['charts']['zip_exists']) else '❌ 없음'}")
+        logger.info(f"Candlestick images: {'OK exists' if (results['charts']['extracted_exists'] or results['charts']['zip_exists']) else 'FAIL missing'}")
         if results['charts']['zip_exists']:
-            logger.info(f"  ZIP 파일: {results['charts']['zip_path']}")
-            logger.info(f"  크기: {results['charts']['zip_size'] / (1024**3):.2f} GB")
+            logger.info(f"  ZIP file: {results['charts']['zip_path']}")
+            logger.info(f"  Size: {results['charts']['zip_size'] / (1024**3):.2f} GB")
         if results['charts']['extracted_exists']:
-            logger.info(f"  추출된 경로: {results['charts']['extracted_path']}")
+            logger.info(f"  Extracted path: {results['charts']['extracted_path']}")
             if 'num_images' in results['charts']:
-                logger.info(f"  이미지 수: {results['charts']['num_images']:,}")
+                logger.info(f"  Image count: {results['charts']['num_images']:,}")
         
         self.verification_results['data_existence'] = results
         return results
     
     def check_code_consistency(self) -> Dict:
         """
-        코드베이스가 논문의 방법론과 일치하는지 확인.
+        Check whether the codebase matches the paper methodology.
         
         Returns
         -------
         dict
-            코드 일치성 검증 결과.
+            Code consistency verification results.
         """
         logger.info("=" * 100)
-        logger.info("코드-논문 일치성 검증")
+        logger.info("Code-paper consistency verification")
         logger.info("=" * 100)
         
         results = {}
         
-        # 1. 4계층 아키텍처 확인
+        # 1. Four-layer architecture check
         results['architecture'] = {
             'layer1_feature_fusion': Path(self.base_path / 'src/data/feature_fusion.py').exists(),
             'layer2_regime_classification': Path(self.base_path / 'src/regime/regime_classifier.py').exists(),
@@ -280,9 +280,9 @@ class PaperCodeConsistencyVerifier:
         
         results['architecture']['all_layers_exist'] = all(results['architecture'].values())
         
-        logger.info(f"4계층 아키텍처: {'✅ 모두 구현됨' if results['architecture']['all_layers_exist'] else '❌ 일부 누락'}")
+        logger.info(f"4-layer architecture: {'OK all implemented' if results['architecture']['all_layers_exist'] else 'FAIL some missing'}")
         
-        # 2. 주요 컴포넌트 확인
+        # 2. Main component check
         results['components'] = {
             'multimodal_features': {
                 'visual': Path(self.base_path / 'src/data/candlestick_generator.py').exists(),
@@ -308,7 +308,7 @@ class PaperCodeConsistencyVerifier:
             }
         }
         
-        # 3. 베이스라인 및 Ablation 모델 확인
+        # 3. Baseline and ablation model check
         results['baselines'] = {
             'single_ppo': Path(self.base_path / 'src/baselines/single_ppo_agent.py').exists(),
             'xgboost': Path(self.base_path / 'src/baselines/xgboost_trader.py').exists(),
@@ -323,32 +323,32 @@ class PaperCodeConsistencyVerifier:
             'model4': Path(self.base_path / 'src/ablation/no_regime_classification.py').exists()
         }
         
-        logger.info(f"베이스라인 방법론: {'✅ 모두 구현됨' if all(results['baselines'].values()) else '❌ 일부 누락'}")
-        logger.info(f"Ablation 모델: {'✅ 모두 구현됨' if all(results['ablation'].values()) else '❌ 일부 누락'}")
+        logger.info(f"Baseline methods: {'OK all implemented' if all(results['baselines'].values()) else 'FAIL some missing'}")
+        logger.info(f"Ablation models: {'OK all implemented' if all(results['ablation'].values()) else 'FAIL some missing'}")
         
         self.verification_results['code_consistency'] = results
         return results
     
     def check_hyperparameter_consistency(self) -> Dict:
         """
-        하이퍼파라미터가 논문과 일치하는지 확인.
+        Check whether hyperparameters match the paper.
         
         Returns
         -------
         dict
-            하이퍼파라미터 일치성 검증 결과.
+            Hyperparameter consistency verification results.
         """
         logger.info("=" * 100)
-        logger.info("하이퍼파라미터 일치성 검증")
+        logger.info("Hyperparameter consistency verification")
         logger.info("=" * 100)
         
         if not self.config:
-            logger.warning("Config 파일을 로드할 수 없어 하이퍼파라미터 검증을 건너뜁니다.")
+            logger.warning("Cannot load config file; skipping hyperparameter verification.")
             return {}
         
         results = {}
         
-        # Regime Classifier 하이퍼파라미터
+        # Regime Classifier hyperparameters
         if 'regime' in self.config:
             regime_config = self.config['regime']
             results['regime'] = {
@@ -364,7 +364,7 @@ class PaperCodeConsistencyVerifier:
                 }
             }
         
-        # Ensemble 하이퍼파라미터
+        # Ensemble hyperparameters
         if 'ensemble' in self.config:
             ensemble_config = self.config['ensemble']
             results['ensemble'] = {
@@ -426,107 +426,107 @@ class PaperCodeConsistencyVerifier:
                 }
             }
         
-        # 결과 출력
+        # Print results
         for category, params in results.items():
             logger.info(f"\n{category.upper()}:")
             for param_name, param_data in params.items():
                 if isinstance(param_data, dict) and 'matches' in param_data:
-                    status = "✅" if param_data['matches'] else "❌"
+                    status = "OK" if param_data['matches'] else "FAIL"
                     logger.info(
                         f"  {status} {param_name}: "
-                        f"논문={param_data['paper']}, "
-                        f"Config={param_data['config']}"
+                        f"paper={param_data['paper']}, "
+                        f"config={param_data['config']}"
                     )
         
         self.verification_results['hyperparameter_consistency'] = results
         return results
     
     def generate_comprehensive_report(self) -> str:
-        """종합 검증 리포트 생성."""
+        """Generate comprehensive verification report."""
         report = []
         report.append("=" * 100)
-        report.append("논문-코드 일치성 및 데이터 존재 여부 종합 검증 리포트")
+        report.append("Paper-Code Consistency and Data Existence Verification Report")
         report.append("=" * 100)
         report.append("")
         
-        # 데이터 존재 여부
-        report.append("【1. 데이터 존재 여부】")
+        # Data existence
+        report.append("[1. Data Existence]")
         report.append("-" * 100)
         
         data_results = self.verification_results.get('data_existence', {})
         
         if 'ohlcv' in data_results:
             ohlcv = data_results['ohlcv']
-            status = "✅" if ohlcv.get('exists') else "❌"
-            report.append(f"{status} OHLCV 데이터")
-            report.append(f"  경로: {ohlcv.get('expected_path', 'N/A')}")
-            report.append(f"  존재: {'예' if ohlcv.get('exists') else '아니오'}")
+            status = "OK" if ohlcv.get('exists') else "FAIL"
+            report.append(f"{status} OHLCV data")
+            report.append(f"  Path: {ohlcv.get('expected_path', 'N/A')}")
+            report.append(f"  Exists: {'yes' if ohlcv.get('exists') else 'no'}")
             if ohlcv.get('exists'):
-                report.append(f"  크기: {ohlcv.get('size', 0):,} bytes")
-                report.append(f"  OHLCV 컬럼 존재: {'예' if ohlcv.get('has_ohlcv_columns') else '아니오'}")
+                report.append(f"  Size: {ohlcv.get('size', 0):,} bytes")
+                report.append(f"  OHLCV columns present: {'yes' if ohlcv.get('has_ohlcv_columns') else 'no'}")
             report.append("")
         
         if 'news' in data_results:
             news = data_results['news']
-            status = "✅" if news.get('exists') else "❌"
-            report.append(f"{status} 뉴스 데이터")
-            report.append(f"  경로: {news.get('expected_path', 'N/A')}")
-            report.append(f"  존재: {'예' if news.get('exists') else '아니오'}")
+            status = "OK" if news.get('exists') else "FAIL"
+            report.append(f"{status} News data")
+            report.append(f"  Path: {news.get('expected_path', 'N/A')}")
+            report.append(f"  Exists: {'yes' if news.get('exists') else 'no'}")
             if news.get('exists'):
-                report.append(f"  크기: {news.get('size', 0):,} bytes")
+                report.append(f"  Size: {news.get('size', 0):,} bytes")
                 if 'total_rows' in news and news['total_rows']:
-                    report.append(f"  행 수: {news['total_rows']:,} (논문: {PAPER_DATA_SPEC['news']['total_articles']:,})")
+                    report.append(f"  Rows: {news['total_rows']:,} (paper: {PAPER_DATA_SPEC['news']['total_articles']:,})")
             report.append("")
         
         if 'charts' in data_results:
             charts = data_results['charts']
-            status = "✅" if (charts.get('extracted_exists') or charts.get('zip_exists')) else "❌"
-            report.append(f"{status} 캔들스틱 이미지 데이터")
+            status = "OK" if (charts.get('extracted_exists') or charts.get('zip_exists')) else "FAIL"
+            report.append(f"{status} Candlestick image data")
             if charts.get('zip_exists'):
-                report.append(f"  ZIP 파일: {charts.get('zip_path', 'N/A')}")
-                report.append(f"  크기: {charts.get('zip_size', 0) / (1024**3):.2f} GB")
+                report.append(f"  ZIP file: {charts.get('zip_path', 'N/A')}")
+                report.append(f"  Size: {charts.get('zip_size', 0) / (1024**3):.2f} GB")
             if charts.get('extracted_exists'):
-                report.append(f"  추출된 경로: {charts.get('extracted_path', 'N/A')}")
+                report.append(f"  Extracted path: {charts.get('extracted_path', 'N/A')}")
                 if 'num_images' in charts:
-                    report.append(f"  이미지 수: {charts['num_images']:,}")
+                    report.append(f"  Image count: {charts['num_images']:,}")
             report.append("")
         
-        # 코드 일치성
-        report.append("【2. 코드-논문 일치성】")
+        # Code consistency
+        report.append("[2. Code-Paper Consistency]")
         report.append("-" * 100)
         
         code_results = self.verification_results.get('code_consistency', {})
         
         if 'architecture' in code_results:
             arch = code_results['architecture']
-            status = "✅" if arch.get('all_layers_exist') else "❌"
-            report.append(f"{status} 4계층 아키텍처 구현")
-            report.append(f"  Layer 1 (Feature Fusion): {'✅' if arch.get('layer1_feature_fusion') else '❌'}")
-            report.append(f"  Layer 2 (Regime Classification): {'✅' if arch.get('layer2_regime_classification') else '❌'}")
-            report.append(f"  Layer 3 (PPO RL): {'✅' if arch.get('layer3_ppo_rl') else '❌'}")
-            report.append(f"  Layer 4 (Ensemble): {'✅' if arch.get('layer4_ensemble') else '❌'}")
+            status = "OK" if arch.get('all_layers_exist') else "FAIL"
+            report.append(f"{status} 4-layer architecture implementation")
+            report.append(f"  Layer 1 (Feature Fusion): {'OK' if arch.get('layer1_feature_fusion') else 'FAIL'}")
+            report.append(f"  Layer 2 (Regime Classification): {'OK' if arch.get('layer2_regime_classification') else 'FAIL'}")
+            report.append(f"  Layer 3 (PPO RL): {'OK' if arch.get('layer3_ppo_rl') else 'FAIL'}")
+            report.append(f"  Layer 4 (Ensemble): {'OK' if arch.get('layer4_ensemble') else 'FAIL'}")
             report.append("")
         
         if 'baselines' in code_results:
             baselines = code_results['baselines']
             all_exist = all(baselines.values())
-            status = "✅" if all_exist else "❌"
-            report.append(f"{status} 베이스라인 방법론 구현")
+            status = "OK" if all_exist else "FAIL"
+            report.append(f"{status} Baseline method implementation")
             for name, exists in baselines.items():
-                report.append(f"  {name}: {'✅' if exists else '❌'}")
+                report.append(f"  {name}: {'OK' if exists else 'FAIL'}")
             report.append("")
         
         if 'ablation' in code_results:
             ablation = code_results['ablation']
             all_exist = all(ablation.values())
-            status = "✅" if all_exist else "❌"
-            report.append(f"{status} Ablation Study 모델 구현")
+            status = "OK" if all_exist else "FAIL"
+            report.append(f"{status} Ablation study model implementation")
             for name, exists in ablation.items():
-                report.append(f"  {name}: {'✅' if exists else '❌'}")
+                report.append(f"  {name}: {'OK' if exists else 'FAIL'}")
             report.append("")
         
-        # 하이퍼파라미터 일치성
-        report.append("【3. 하이퍼파라미터 일치성】")
+        # Hyperparameter consistency
+        report.append("[3. Hyperparameter Consistency]")
         report.append("-" * 100)
         
         hyper_results = self.verification_results.get('hyperparameter_consistency', {})
@@ -536,23 +536,23 @@ class PaperCodeConsistencyVerifier:
                 report.append(f"\n{category.upper()}:")
                 for param_name, param_data in params.items():
                     if isinstance(param_data, dict) and 'matches' in param_data:
-                        status = "✅" if param_data['matches'] else "❌"
+                        status = "OK" if param_data['matches'] else "FAIL"
                         report.append(
                             f"  {status} {param_name}: "
-                            f"논문={param_data['paper']}, "
-                            f"Config={param_data['config']}"
+                            f"paper={param_data['paper']}, "
+                            f"config={param_data['config']}"
                         )
         else:
-            report.append("Config 파일을 로드할 수 없어 검증을 건너뜁니다.")
+            report.append("Cannot load config file; verification skipped.")
         
         report.append("")
         
-        # 종합 평가
+        # Overall assessment
         report.append("=" * 100)
-        report.append("【종합 평가】")
+        report.append("[Overall Assessment]")
         report.append("=" * 100)
         
-        # 데이터 존재 여부 요약
+        # Data existence summary
         data_exists = (
             data_results.get('ohlcv', {}).get('exists', False) or
             data_results.get('news', {}).get('exists', False) or
@@ -562,15 +562,15 @@ class PaperCodeConsistencyVerifier:
         
         code_consistent = code_results.get('architecture', {}).get('all_layers_exist', False)
         
-        report.append(f"데이터 존재: {'✅ 일부 이상' if data_exists else '❌ 없음'}")
-        report.append(f"코드 구현: {'✅ 완료' if code_consistent else '❌ 불완전'}")
+        report.append(f"Data exists: {'OK at least some' if data_exists else 'FAIL none'}")
+        report.append(f"Code implementation: {'OK complete' if code_consistent else 'FAIL incomplete'}")
         report.append("")
         report.append("=" * 100)
         
         return "\n".join(report)
     
     def save_report(self, output_path: str) -> None:
-        """검증 리포트 저장."""
+        """Save verification report."""
         report = self.generate_comprehensive_report()
         
         output_file = Path(output_path)
@@ -605,16 +605,16 @@ def main():
     
     verifier = PaperCodeConsistencyVerifier(args.config)
     
-    # 데이터 존재 여부 확인
+    # Check data existence
     verifier.check_data_existence()
     
-    # 코드 일치성 확인
+    # Check code consistency
     verifier.check_code_consistency()
     
-    # 하이퍼파라미터 일치성 확인
+    # Check hyperparameter consistency
     verifier.check_hyperparameter_consistency()
     
-    # 리포트 생성 및 저장
+    # Generate and save report
     verifier.save_report(args.output)
     
     logger.info("Comprehensive verification completed!")

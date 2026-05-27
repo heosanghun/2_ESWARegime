@@ -1,11 +1,11 @@
-# 논문 vs 코드베이스 성과지표 비교표
+# Manuscript vs codebase performance comparison
 
-출처: 논문 [최종완성본_260211] A Robust Dynamic Ensemble Reinforcement Learning Trading System for Responding to Market Regimes (4).pdf, Table 2 (Proposed Method) vs 현재 코드베이스 백테스트 결과.
+Source: manuscript Table 2 (Proposed Method) vs current codebase backtest output.
 
-생성 시각: 2026-02-12 10:11:15
+Generated: 2026-02-12 10:11:15
 
-| 지표 | 논문 제시 값 | 코드베이스 값 | 차이 | 일치성 (%) |
-|------|-------------|---------------|------|------------|
+| Metric | Manuscript | Codebase | Difference | Consistency (%) |
+|--------|------------|----------|------------|-----------------|
 | Sharpe Ratio | 2.45 | 3.0834 | 0.6334 | 74.1% |
 | Cumulative Return | 1.23 | 0.9719 | -0.2581 | 79.0% |
 | CAGR | 0.41 | 2.9361 | 2.5261 | 0.0% |
@@ -13,9 +13,9 @@
 | Win Rate | 0.58 | 0.2598 | -0.3202 | 44.8% |
 | Profit Factor | 2.1 | 42.7446 | 40.6446 | 0.0% |
 
-## 종합
+## Summary
 
-- **항목별 일치성**: 위 표 참조.
-- **평균 일치성**: **33.0%** (6개 지표 산술 평균).
+- **Per-metric consistency:** see table above.
+- **Average consistency:** **33.0%** (arithmetic mean over six metrics).
 
-※ 일치성(%) = 논문 값과의 상대적 차이가 작을수록 100%에 가깝게 계산. 테스트 기간·데이터가 논문과 동일하지 않으면 수치가 달라질 수 있음.
+Note: consistency (%) is higher when the codebase value is closer to the manuscript value. Numbers may differ if the test window or data differ from the manuscript.

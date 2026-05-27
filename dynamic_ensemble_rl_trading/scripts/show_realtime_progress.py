@@ -1,7 +1,7 @@
 """
-실시간 진행률 표시 (100% 일치 자율 셀프검증).
+Real-time progress display (100% consistency autonomous self-verification).
 
-progress_reach_100.json 과 로그를 읽어 진행률을 주기적으로 갱신하여 출력합니다.
+Reads progress_reach_100.json and logs, refreshing progress output periodically.
 """
 
 import json
@@ -13,7 +13,7 @@ BASE = Path(__file__).resolve().parent.parent
 PROGRESS_FILE = BASE / "results" / "verification" / "progress_reach_100.json"
 LOG_FILE = BASE / "results" / "verification" / "reach_100_autonomous.log"
 REFRESH_SEC = 5
-MAX_IDLE_SEC = 600  # 10분간 갱신 없으면 종료
+MAX_IDLE_SEC = 600  # Exit if no update for 10 minutes
 
 
 def load_progress():
@@ -40,7 +40,7 @@ def last_new_best_from_log():
 
 
 def progress_from_log():
-    """progress_reach_100.json 없을 때 로그에서 Try N 추출."""
+    """Extract Try N from log when progress_reach_100.json is missing."""
     if not LOG_FILE.exists():
         return None
     try:

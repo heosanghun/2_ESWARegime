@@ -1,44 +1,44 @@
 ====================================================================================================
-종합 검증 리포트
-생성 시간: 2026-02-11 20:21:21
+Comprehensive verification report
+Generated: 2026-02-11 20:21:21
 ====================================================================================================
 
-1. 데이터 상태
+1. Data status
 ----------------------------------------------------------------------------------------------------
-  ✓ ohlcv: 사용 가능
-  ✓ news: 사용 가능
-  ✓ charts: 사용 가능
+  ✓ ohlcv: available
+  ✓ news: available
+  ✓ charts: available
 
-2. 코드-논문 일치성
+2. Code vs manuscript alignment
 ----------------------------------------------------------------------------------------------------
 
   regime_classifier_params:
-    ✓ n_estimators: 예상=100, 실제=100
-    ✓ max_depth: 예상=6, 실제=6
-    ✓ learning_rate: 예상=0.1, 실제=0.1
+    ✓ n_estimators: expected=100, actual=100
+    ✓ max_depth: expected=6, actual=6
+    ✓ learning_rate: expected=0.1, actual=0.1
 
   environment_params:
-    ✓ transaction_fee: 예상=0.0005, 실제=0.0005
-    ✓ slippage: 예상=0.0002, 실제=0.0002
-    ✓ initial_capital: 예상=10000.0, 실제=10000.0
+    ✓ transaction_fee: expected=0.0005, actual=0.0005
+    ✓ slippage: expected=0.0002, actual=0.0002
+    ✓ initial_capital: expected=10000.0, actual=10000.0
 
   ensemble_params:
-    ✓ temperature: 예상=10.0, 실제=10.0
-    ✓ performance_window: 예상=30, 실제=30
-    ✓ num_agents_per_pool: 예상=5, 실제=5
-    ✓ confidence_threshold: 예상=0.6, 실제=0.6
+    ✓ temperature: expected=10.0, actual=10.0
+    ✓ performance_window: expected=30, actual=30
+    ✓ num_agents_per_pool: expected=5, actual=5
+    ✓ confidence_threshold: expected=0.6, actual=0.6
 
-3. 모델 상태
+3. Model status
 ----------------------------------------------------------------------------------------------------
-  ✓ regime_classifier: 준비됨
-  ✗ ppo_agents: 없음
+  ✓ regime_classifier: ready
+  ✗ ppo_agents: missing
 
-4. 종합 평가
+4. Overall assessment
 ----------------------------------------------------------------------------------------------------
-  데이터 준비: ✓
-  코드 일치성: ✓
-  모델 준비: ✗
+  Data ready: ✓
+  Code alignment: ✓
+  Models ready: ✗
 
-  → 데이터와 코드 준비 완료. 모델 학습 필요
+  → Data and code are ready; model training required
 
 ====================================================================================================

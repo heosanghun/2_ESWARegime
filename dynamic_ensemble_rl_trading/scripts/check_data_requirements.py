@@ -1,8 +1,7 @@
 """
-데이터 요구사항 확인 및 다운로드 가이드 스크립트.
+Check data requirements and download guide.
 
-논문에서 요구하는 데이터가 있는지 확인하고,
-없는 경우 다운로드 방법을 안내합니다.
+Verifies whether paper-required data exists and provides download guidance when missing.
 """
 
 import sys
@@ -30,17 +29,17 @@ logger = logging.getLogger(__name__)
 
 def check_data_files(config_path: str = 'config/config.yaml') -> dict:
     """
-    논문에서 요구하는 데이터 파일 존재 여부 확인.
+    Check whether paper-required data files exist.
     
     Parameters
     ----------
     config_path : str
-        Config 파일 경로.
+        Path to config file.
     
     Returns
     -------
     dict
-        데이터 파일 존재 여부 및 상세 정보.
+        Data file existence and details.
     """
     base_path = Path(config_path).parent.parent
     
@@ -107,44 +106,44 @@ def check_data_files(config_path: str = 'config/config.yaml') -> dict:
 
 
 def print_data_requirements():
-    """논문에서 요구하는 데이터 요구사항 출력."""
+    """Print paper data requirements."""
     print("\n" + "=" * 100)
-    print("논문 데이터 요구사항")
+    print("Paper Data Requirements")
     print("=" * 100)
     
-    print("\n1. OHLCV 데이터")
-    print("   - 자산: BTC/USDT")
-    print("   - 거래소: Binance")
-    print("   - 기간: 2021-10-12 ~ 2023-12-19 (26개월)")
-    print("   - 주기: Hourly (시간별)")
-    print("   - 예상 데이터 포인트: 약 18,720개")
-    print("   - 형식: CSV (date, open, high, low, close, volume)")
+    print("\n1. OHLCV Data")
+    print("   - Asset: BTC/USDT")
+    print("   - Exchange: Binance")
+    print("   - Period: 2021-10-12 ~ 2023-12-19 (26 months)")
+    print("   - Frequency: Hourly")
+    print("   - Expected data points: ~18,720")
+    print("   - Format: CSV (date, open, high, low, close, volume)")
     
-    print("\n2. 뉴스 데이터")
-    print("   - 파일: cryptonews_2021-10-12_2023-12-19.csv")
-    print("   - 총 기사 수: 31,037개")
-    print("   - 컬럼: date, sentiment, source, subject, text, title, url")
-    print("   - 기간: 2021-10-12 ~ 2023-12-19")
+    print("\n2. News Data")
+    print("   - File: cryptonews_2021-10-12_2023-12-19.csv")
+    print("   - Total articles: 31,037")
+    print("   - Columns: date, sentiment, source, subject, text, title, url")
+    print("   - Period: 2021-10-12 ~ 2023-12-19")
     
-    print("\n3. 캔들스틱 이미지 데이터")
-    print("   - 파일: chart_(7.42GB).zip (압축)")
-    print("   - 또는: OHLCV 데이터로부터 실시간 생성 가능")
-    print("   - 이미지 크기: 224x224 픽셀")
-    print("   - Lookback: 60시간")
+    print("\n3. Candlestick Image Data")
+    print("   - File: chart_(7.42GB).zip (compressed)")
+    print("   - Or: can be generated on the fly from OHLCV data")
+    print("   - Image size: 224x224 pixels")
+    print("   - Lookback: 60 hours")
     
     print("\n" + "=" * 100)
-    print("데이터 다운로드 방법")
+    print("Data Download Methods")
     print("=" * 100)
     
-    print("\n1. Google Drive (논문에서 제공)")
+    print("\n1. Google Drive (provided in paper)")
     print("   URL: https://drive.google.com/drive/folders/14UvhfTAUGlqbL27kbP-Bn86KgPZ9OxpB")
-    print("   포함 파일:")
+    print("   Included files:")
     print("   - cryptonews_2021-10-12_2023-12-19.csv (12.6 MB)")
-    print("   - chart_(7.42GB).zip (6.8 GB 압축)")
-    print("   주의: OHLCV 데이터는 별도로 준비 필요")
+    print("   - chart_(7.42GB).zip (6.8 GB compressed)")
+    print("   Note: OHLCV data must be prepared separately")
     
-    print("\n2. Binance API (OHLCV 데이터)")
-    print("   python-binance 라이브러리 사용:")
+    print("\n2. Binance API (OHLCV data)")
+    print("   Using python-binance library:")
     print("   ```python")
     print("   from binance.client import Client")
     print("   client = Client()")
@@ -154,12 +153,12 @@ def print_data_requirements():
     print("   )")
     print("   ```")
     
-    print("\n3. 캔들스틱 이미지 생성")
-    print("   OHLCV 데이터가 있으면 코드로 자동 생성:")
+    print("\n3. Candlestick Image Generation")
+    print("   If OHLCV data exists, generate automatically in code:")
     print("   ```python")
     print("   from src.data.candlestick_generator import CandlestickGenerator")
     print("   generator = CandlestickGenerator(image_size=224, lookback_hours=60)")
-    print("   # OHLCV 데이터로부터 이미지 생성")
+    print("   # Generate images from OHLCV data")
     print("   ```")
     
     print("\n" + "=" * 100)
@@ -188,7 +187,7 @@ def main():
     
     # Summary
     print("\n" + "=" * 100)
-    print("데이터 존재 여부 요약")
+    print("Data Availability Summary")
     print("=" * 100)
     
     all_required_exist = all(
@@ -198,21 +197,21 @@ def main():
     
     for data_type, info in results.items():
         status = "EXISTS" if info['exists'] else "MISSING"
-        required = "(필수)" if info['required'] else "(선택)"
+        required = "(required)" if info['required'] else "(optional)"
         print(f"\n{data_type.upper()} {required}: {status}")
-        print(f"  경로: {info['path']}")
-        print(f"  설명: {info['description']}")
+        print(f"  Path: {info['path']}")
+        print(f"  Description: {info['description']}")
         if info['exists']:
             if 'num_images' in info:
-                print(f"  이미지 수: {info['num_images']:,}")
-            print(f"  크기: {info['size'] / (1024**2):.2f} MB")
+                print(f"  Image count: {info['num_images']:,}")
+            print(f"  Size: {info['size'] / (1024**2):.2f} MB")
     
     print("\n" + "=" * 100)
     
     if all_required_exist:
-        print("✅ 모든 필수 데이터가 준비되었습니다!")
+        print("All required data is ready!")
     else:
-        print("⚠️ 일부 필수 데이터가 없습니다. 위의 다운로드 방법을 참고하세요.")
+        print("Some required data is missing. See download methods above.")
     
     print("=" * 100 + "\n")
 

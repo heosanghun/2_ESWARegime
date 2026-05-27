@@ -1,11 +1,11 @@
 """
-전체 파이프라인 실행 및 논문 성능 검증.
+Run full pipeline and verify paper performance.
 
-순서:
-1. 전체 시스템 백테스트 (main.py 로직 인라인)
-2. 성능 지표 계산 (Sharpe, CumRet, CAGR, MDD, Win Rate, Profit Factor)
-3. 논문 Table 2와 비교 검증
-4. 추가 단계: ablation/baseline 검토 및 리포트 생성
+Steps:
+1. Full system backtest (main.py logic inlined)
+2. Compute performance metrics (Sharpe, CumRet, CAGR, MDD, Win Rate, Profit Factor)
+3. Compare and verify against paper Table 2
+4. Additional steps: ablation/baseline review and report generation
 """
 
 import sys
@@ -46,7 +46,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 논문 Table 2 (Proposed Method 목표)
+# Paper Table 2 (Proposed Method targets)
 PAPER_TABLE2 = {
     'Proposed Method': {'Sharpe Ratio': 2.45, 'Cumulative Return': 1.23, 'CAGR': 0.41,
                        'Maximum Drawdown': -0.15, 'Win Rate': 0.58, 'Profit Factor': 2.1},
@@ -81,7 +81,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
 
 def run_backtest_and_get_metrics(config: Dict[str, Any]) -> Dict[str, Any]:
-    """백테스트 실행 후 성능 지표 반환."""
+    """Run backtest and return performance metrics."""
     set_seed(config.get('random_seed', 42))
 
     logger.info("Loading data and building states...")
@@ -201,7 +201,7 @@ def run_backtest_and_get_metrics(config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def metrics_to_comparison_format(metrics: Dict[str, float]) -> Dict[str, float]:
-    """Backtester metrics 키를 논문 표기로 매핑."""
+    """Map Backtester metric keys to paper notation."""
     return {
         'Sharpe Ratio': metrics.get('sharpe_ratio', 0.0),
         'Cumulative Return': metrics.get('cumulative_return', 0.0),

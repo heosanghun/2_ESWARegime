@@ -169,7 +169,7 @@ class DynamicWeightCalculator:
         Implements Eq. 6:
         w_{i,t} = exp(SR_{i,30}/T) / sum(exp(SR_{j,30}/T))
         
-        초기 데이터 부족 시 균등 가중치 반환.
+        Returns equal weights when insufficient history is available.
         """
         if self.num_agents == 0:
             raise ValueError("No agents initialized. Call initialize_agents() first.")
@@ -190,18 +190,18 @@ class DynamicWeightCalculator:
         
         sharpe_ratios = np.array(sharpe_ratios)
         
-        # 데이터 부족 시 균등 가중치
+        # Equal weights when data are insufficient
         if not has_sufficient_data:
             return np.ones(self.num_agents) / self.num_agents
         
-        # 모든 Sharpe Ratio가 동일하면 균등 가중치
+        # Equal weights when all Sharpe ratios are identical
         if np.allclose(sharpe_ratios, sharpe_ratios[0]):
             return np.ones(self.num_agents) / self.num_agents
         
         # Apply Softmax with temperature
         # w_i = exp(SR_i / T) / sum(exp(SR_j / T))
-        # Negative Sharpe Ratios도 처리하기 위해 offset 추가
-        sharpe_offset = sharpe_ratios - np.min(sharpe_ratios)  # 최소값을 0으로
+        # Shift so the minimum Sharpe maps to zero (handles negative values)
+        sharpe_offset = sharpe_ratios - np.min(sharpe_ratios)
         exp_scores = np.exp(sharpe_offset / self.temperature)
         weights = exp_scores / np.sum(exp_scores)
         

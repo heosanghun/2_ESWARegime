@@ -1,8 +1,8 @@
 """
-논문 스펙에 맞는 합성 데이터 생성 스크립트.
+Generate synthetic data matching paper specifications.
 
-논문에서 사용한 데이터 스펙에 맞춰 합성 데이터를 생성하여
-시스템 테스트 및 검증을 가능하게 합니다.
+Creates synthetic data aligned with the paper data spec to enable
+system testing and verification.
 """
 
 import sys
@@ -37,67 +37,67 @@ def generate_ohlcv_data(
     output_path: str = 'data/raw/ohlcv_data.csv'
 ) -> pd.DataFrame:
     """
-    논문 스펙에 맞는 BTC/USDT OHLCV 합성 데이터 생성.
+    Generate synthetic BTC/USDT OHLCV data matching paper specifications.
     
     Parameters
     ----------
     start_date : str
-        시작 날짜 (YYYY-MM-DD).
+        Start date (YYYY-MM-DD).
     end_date : str
-        종료 날짜 (YYYY-MM-DD).
+        End date (YYYY-MM-DD).
     base_price : float
-        초기 가격 (USD).
+        Initial price (USD).
     output_path : str
-        출력 파일 경로.
+        Output file path.
     
     Returns
     -------
     pd.DataFrame
-        생성된 OHLCV 데이터.
+        Generated OHLCV data.
     """
     logger.info(f"Generating OHLCV data from {start_date} to {end_date}")
     
-    # 날짜 범위 생성 (hourly)
+    # Build date range (hourly)
     start = pd.to_datetime(start_date)
     end = pd.to_datetime(end_date)
     timestamps = pd.date_range(start=start, end=end, freq='H')
     
     logger.info(f"Total timestamps: {len(timestamps)}")
     
-    # 시드 고정 (재현 가능성)
+    # Fixed seed for reproducibility
     np.random.seed(42)
     
-    # 가격 생성 (랜덤 워크 + 트렌드)
-    # 2021년 말: 상승장, 2022년: 약세장, 2023년: 회복
+    # Price generation (random walk + trend)
+    # Late 2021: bull, 2022: bear, 2023: recovery
     prices = []
     current_price = base_price
     
     for i, ts in enumerate(timestamps):
-        # 시장 체제에 따른 다른 변동성
+        # Different volatility by market regime
         if ts.year == 2021 or (ts.year == 2022 and ts.month <= 5):
-            # 상승장: 양의 트렌드
-            trend = 0.0001  # 시간당 0.01% 상승
-            volatility = 0.02  # 2% 변동성
+            # Bull market: positive trend
+            trend = 0.0001  # 0.01% per hour
+            volatility = 0.02  # 2% volatility
         elif ts.year == 2022:
-            # 약세장: 음의 트렌드
-            trend = -0.00015  # 시간당 0.015% 하락
-            volatility = 0.025  # 2.5% 변동성 (높은 변동성)
+            # Bear market: negative trend
+            trend = -0.00015  # 0.015% per hour down
+            volatility = 0.025  # 2.5% volatility (high)
         else:
-            # 2023년: 회복 단계
-            trend = 0.00005  # 약한 상승
-            volatility = 0.018  # 1.8% 변동성
+            # 2023: recovery phase
+            trend = 0.00005  # mild uptrend
+            volatility = 0.018  # 1.8% volatility
         
-        # 랜덤 워크
+        # Random walk
         change = np.random.normal(trend, volatility)
         current_price = current_price * (1 + change)
         
-        # OHLC 생성
+        # Build OHLC
         intraday_volatility = volatility * 0.3
         open_price = current_price
         close_price = open_price * (1 + np.random.normal(0, intraday_volatility))
         high_price = max(open_price, close_price) * (1 + abs(np.random.normal(0, intraday_volatility * 0.5)))
         low_price = min(open_price, close_price) * (1 - abs(np.random.normal(0, intraday_volatility * 0.5)))
-        volume = np.random.lognormal(15, 0.5)  # 로그 정규 분포
+        volume = np.random.lognormal(15, 0.5)  # log-normal distribution
         
         prices.append({
             'date': ts,
@@ -113,7 +113,7 @@ def generate_ohlcv_data(
     df = pd.DataFrame(prices)
     df.set_index('date', inplace=True)
     
-    # 파일 저장
+    # Save file
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_file)
@@ -132,23 +132,23 @@ def generate_news_data(
     output_path: str = 'data/cryptonews_2021-10-12_2023-12-19.csv'
 ) -> pd.DataFrame:
     """
-    논문 스펙에 맞는 뉴스 데이터 생성.
+    Generate news data matching paper specifications.
     
     Parameters
     ----------
     start_date : str
-        시작 날짜.
+        Start date.
     end_date : str
-        종료 날짜.
+        End date.
     total_articles : int
-        총 기사 수 (논문: 31,037개).
+        Total article count (paper: 31,037).
     output_path : str
-        출력 파일 경로.
+        Output file path.
     
     Returns
     -------
     pd.DataFrame
-        생성된 뉴스 데이터.
+        Generated news data.
     """
     logger.info(f"Generating news data: {total_articles} articles")
     
@@ -158,22 +158,22 @@ def generate_news_data(
     end = pd.to_datetime(end_date)
     date_range = (end - start).days
     
-    # 날짜별 기사 수 분포 (일부 날짜에 집중)
+    # Articles per day (some days concentrated)
     articles_per_day = np.random.poisson(total_articles / date_range, date_range)
-    articles_per_day = articles_per_day.clip(min=1)  # 최소 1개
+    articles_per_day = articles_per_day.clip(min=1)  # at least 1
     
-    # 총 기사 수 조정
+    # Adjust total article count
     current_total = articles_per_day.sum()
     if current_total != total_articles:
         diff = total_articles - current_total
-        # 차이를 랜덤하게 분배
+        # Distribute difference randomly
         indices = np.random.choice(len(articles_per_day), abs(diff), replace=True)
         articles_per_day[indices] += np.sign(diff)
     
-    # 기사 생성
+    # Generate articles
     articles = []
     sentiment_classes = ['positive', 'neutral', 'negative']
-    sentiment_distribution = [0.45, 0.34, 0.21]  # 논문에서 언급한 분포
+    sentiment_distribution = [0.45, 0.34, 0.21]  # distribution mentioned in paper
     
     sources = ['CoinDesk', 'CoinTelegraph', 'Bloomberg', 'Reuters', 'CryptoNews']
     subjects = ['Bitcoin', 'Cryptocurrency', 'Market', 'Trading', 'Regulation']
@@ -184,18 +184,18 @@ def generate_news_data(
         num_articles = articles_per_day[day_offset]
         
         for _ in range(num_articles):
-            # 시간 랜덤 생성
+            # Random time
             hour = np.random.randint(0, 24)
             minute = np.random.randint(0, 60)
             timestamp = date.replace(hour=hour, minute=minute)
             
-            # 감정 분포에 따라 선택
+            # Select by sentiment distribution
             sentiment_class = np.random.choice(
                 sentiment_classes,
                 p=sentiment_distribution
             )
             
-            # 감정 점수 생성
+            # Generate sentiment scores
             if sentiment_class == 'positive':
                 polarity = np.random.uniform(0.1, 1.0)
                 subjectivity = np.random.uniform(0.3, 0.8)
@@ -222,7 +222,7 @@ def generate_news_data(
     df = pd.DataFrame(articles)
     df = df.sort_values('date').reset_index(drop=True)
     
-    # 파일 저장
+    # Save file
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_file, index=False)
@@ -276,17 +276,17 @@ def main():
     args = parser.parse_args()
     
     logger.info("=" * 100)
-    logger.info("합성 데이터 생성 시작")
+    logger.info("Starting synthetic data generation")
     logger.info("=" * 100)
     
-    # OHLCV 데이터 생성
+    # Generate OHLCV data
     ohlcv_data = generate_ohlcv_data(
         start_date=args.start_date,
         end_date=args.end_date,
         output_path=args.ohlcv_output
     )
     
-    # 뉴스 데이터 생성
+    # Generate news data
     news_data = generate_news_data(
         start_date=args.start_date,
         end_date=args.end_date,
@@ -295,11 +295,11 @@ def main():
     )
     
     logger.info("=" * 100)
-    logger.info("합성 데이터 생성 완료!")
+    logger.info("Synthetic data generation complete!")
     logger.info("=" * 100)
-    logger.info(f"OHLCV 데이터: {len(ohlcv_data)} rows")
-    logger.info(f"뉴스 데이터: {len(news_data)} articles")
-    logger.info("\n다음 단계: 모델 학습을 진행하세요.")
+    logger.info(f"OHLCV data: {len(ohlcv_data)} rows")
+    logger.info(f"News data: {len(news_data)} articles")
+    logger.info("\nNext step: proceed with model training.")
 
 
 if __name__ == "__main__":

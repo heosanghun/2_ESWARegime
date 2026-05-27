@@ -1,10 +1,10 @@
-# ─── GitHub 업로드 제외: 데이터 파일 (용량·재현 가능) ───
+# --- Data (large; reproducible via download scripts) ---
 data/raw/*.csv
 data/processed/
 data/*.csv
 !data/.gitkeep
 
-# ─── 학습된 모델 (용량 큼, 사용자가 직접 학습) ───
+# --- Trained models (large; user trains locally) ---
 models/checkpoints/
 models/ppo_agents/
 models/regime_classifier/*.json
@@ -15,7 +15,7 @@ models/walk_forward_sma_longonly/
 models/walk_forward_reward_v2/
 models/walk_forward_reward_v2_full/
 
-# ─── 결과/로그 (재실행으로 생성 가능) ───
+# --- Results / logs (regenerated on rerun) ---
 results/backtest/*.pkl
 results/logs/*.log
 results/verification/*.log
@@ -25,7 +25,7 @@ results/plots/*.html
 results/verification/improvement_history.json
 results/verification/progress_reach_100.json
 
-# walk-forward: keep MD / JSON summaries (small), drop raw logs and pickles.
+# walk-forward: keep MD/JSON summaries; drop raw logs and pickles
 results/walk_forward/*.log
 results/walk_forward/fold_*/*.pkl
 results/walk_forward/fold_*/*.log
@@ -42,10 +42,10 @@ results/walk_forward_reward_v2_full/*.log
 results/walk_forward_reward_v2_full/fold_*/*.pkl
 results/walk_forward_reward_v2_full/fold_*/*.log
 
-# ─── 설정 백업 (업로드 불필요) ───
+# --- Config backups ---
 config/config_backup_iter_*.yaml
 
-# ─── Python ───
+# --- Python ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -59,7 +59,7 @@ env/
 dist/
 build/
 
-# ─── 환경/IDE/기타 ───
+# --- Environment / IDE ---
 .env
 .env.local
 *.log
@@ -70,14 +70,14 @@ build/
 .DS_Store
 Thumbs.db
 
-# ─── 대용량/미사용 ───
+# --- Large binaries ---
 *.zip
 *.pkl
 *.h5
 *.pth
 *.pt
 
-# ─── ESWA: 내부 문서 (심사관 공개 제외) ───
+# --- ESWA: internal docs (not for reviewer release) ---
 doc/*.pdf
 doc/reframing_templates/
 doc/audit_meeting_report*.md
@@ -86,21 +86,17 @@ doc/PHASE2_*.md
 doc/POST_WF_AUTOPILOT.md
 doc/ROUTING_ABLATION_REPORT.md
 doc/Path_A_Reframing*.md
-doc/100퍼센트_*.md
-doc/진행률_*.md
-doc/박사논문_*.md
-doc/작업_분석_*.md
-doc/상태_및_*.md
-doc/로컬_데이터_*.md
 doc/Rebuttal_Letter_draft.md
-doc/ESWA_Reviewer3_개발계획서.md
-doc/논문_데이터_전체_분석_및_코드_비교표.md
-doc/논문_데이터_vs_코드_로컬데이터_비교표.md
-doc/논문_vs_코드베이스_성과지표_비교표.md
-doc/총_데이터_및_성과지표_종합_비교표.md
-doc/논문_로컬_성능갭_및_리뷰어변경_종합비교표.md
+doc/*100*percent*.md
+doc/*progress*.md
+doc/*phd*.md
+doc/*internal*.md
+doc/*local_data*.md
+doc/*paper_comparison_legacy*.md
+doc/*performance_gap*.md
+doc/*reviewer_change*.md
 
-# ─── 실험 브랜치 (헤드라인 audit 외) ───
+# --- Experimental branches (not headline audit) ---
 results/autonomous/
 results/routing_ablation/
 results/walk_forward_reward_v2_1M/
@@ -111,7 +107,7 @@ models/seq_classifier_lstm/
 models/walk_forward_reward_v2_1M/
 config/config_backup_pre_reward_v2_1M.yaml
 
-# ─── Audit 실행 로그 ───
+# --- Audit run logs ---
 results/audit/**/run.log
 results/audit/**/*_run*.log
 results/audit/shap_audit_run*.log

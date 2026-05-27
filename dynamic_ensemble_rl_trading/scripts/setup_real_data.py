@@ -1,8 +1,8 @@
 """
-실제 데이터를 프로젝트에 통합하는 스크립트.
+Integrate real data into the project.
 
-사용자가 제공한 실제 데이터 경로를 확인하고,
-필요시 심볼릭 링크 또는 복사를 통해 프로젝트에 통합합니다.
+Checks user-provided real data paths and integrates them into the project
+via symbolic links or copy when needed.
 """
 
 import sys
@@ -26,16 +26,16 @@ logger = logging.getLogger(__name__)
 
 
 def check_and_setup_data():
-    """실제 데이터 경로를 확인하고 프로젝트에 통합."""
+    """Check real data paths and integrate into the project."""
     
-    # 실제 데이터 경로
+    # Real data paths
     real_data_paths = {
         'news': Path(r'D:\AI\TradingAgents\0_data\crypto_news\cryptonews_2021-10-12_2023-12-19.csv'),
         'ohlcv': Path(r'D:\AI\MCTS\data_\ohlc\BTC-USD.csv'),
         'charts': Path(r'D:\AI\TradingAgents\0_data\candlestick_images\chart_(7.42GB)'),
     }
     
-    # 프로젝트 데이터 경로
+    # Project data paths
     project_data_paths = {
         'news': Path('data/cryptonews_2021-10-12_2023-12-19.csv'),
         'ohlcv': Path('data/raw/ohlcv_data.csv'),
@@ -43,66 +43,66 @@ def check_and_setup_data():
     }
     
     logger.info("=" * 100)
-    logger.info("실제 데이터 확인 및 통합 시작")
+    logger.info("Starting real data check and integration")
     logger.info("=" * 100)
     
-    # 1. 뉴스 데이터 확인 및 복사
+    # 1. Check and copy news data
     if real_data_paths['news'].exists():
-        logger.info(f"✓ 뉴스 데이터 발견: {real_data_paths['news']}")
+        logger.info(f"OK News data found: {real_data_paths['news']}")
         project_data_paths['news'].parent.mkdir(parents=True, exist_ok=True)
         
-        # 파일 크기 확인
+        # Check file size
         size_mb = real_data_paths['news'].stat().st_size / (1024 * 1024)
-        logger.info(f"  파일 크기: {size_mb:.2f} MB")
+        logger.info(f"  File size: {size_mb:.2f} MB")
         
-        # 샘플 확인
+        # Sample check
         try:
             df = pd.read_csv(real_data_paths['news'], nrows=5)
-            logger.info(f"  컬럼: {list(df.columns)}")
-            logger.info(f"  샘플 행 수: {len(df)}")
+            logger.info(f"  Columns: {list(df.columns)}")
+            logger.info(f"  Sample rows: {len(df)}")
         except Exception as e:
-            logger.warning(f"  샘플 읽기 실패: {e}")
+            logger.warning(f"  Sample read failed: {e}")
         
-        # 심볼릭 링크 또는 복사
+        # Symbolic link or copy
         if not project_data_paths['news'].exists():
             try:
-                # Windows에서는 심볼릭 링크가 관리자 권한 필요할 수 있음
+                # Windows symbolic links may require admin privileges
                 project_data_paths['news'].symlink_to(real_data_paths['news'])
-                logger.info(f"  심볼릭 링크 생성: {project_data_paths['news']}")
+                logger.info(f"  Symbolic link created: {project_data_paths['news']}")
             except Exception:
-                # 복사로 대체
+                # Fall back to copy
                 shutil.copy2(real_data_paths['news'], project_data_paths['news'])
-                logger.info(f"  파일 복사 완료: {project_data_paths['news']}")
+                logger.info(f"  File copied: {project_data_paths['news']}")
         else:
-            logger.info(f"  이미 존재: {project_data_paths['news']}")
+            logger.info(f"  Already exists: {project_data_paths['news']}")
     else:
-        logger.error(f"✗ 뉴스 데이터 없음: {real_data_paths['news']}")
+        logger.error(f"FAIL News data missing: {real_data_paths['news']}")
     
-    # 2. OHLCV 데이터 확인 및 변환
+    # 2. Check and convert OHLCV data
     if real_data_paths['ohlcv'].exists():
-        logger.info(f"✓ OHLCV 데이터 발견: {real_data_paths['ohlcv']}")
+        logger.info(f"OK OHLCV data found: {real_data_paths['ohlcv']}")
         
-        # 데이터 읽기 및 확인
+        # Read and inspect data
         try:
             df = pd.read_csv(real_data_paths['ohlcv'])
-            logger.info(f"  컬럼: {list(df.columns)}")
-            logger.info(f"  총 행 수: {len(df)}")
-            logger.info(f"  날짜 범위: {df['Date'].min()} ~ {df['Date'].max()}")
+            logger.info(f"  Columns: {list(df.columns)}")
+            logger.info(f"  Total rows: {len(df)}")
+            logger.info(f"  Date range: {df['Date'].min()} ~ {df['Date'].max()}")
             
-            # 날짜 변환
+            # Convert dates
             df['Date'] = pd.to_datetime(df['Date'])
             
-            # 논문 기간 필터링 (2021-10-12 ~ 2023-12-19)
+            # Filter to paper period (2021-10-12 ~ 2023-12-19)
             start_date = pd.to_datetime('2021-10-12')
             end_date = pd.to_datetime('2023-12-19')
             
             df_filtered = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)].copy()
             
             if len(df_filtered) > 0:
-                logger.info(f"  필터링 후 행 수: {len(df_filtered)}")
-                logger.info(f"  필터링된 날짜 범위: {df_filtered['Date'].min()} ~ {df_filtered['Date'].max()}")
+                logger.info(f"  Rows after filtering: {len(df_filtered)}")
+                logger.info(f"  Filtered date range: {df_filtered['Date'].min()} ~ {df_filtered['Date'].max()}")
                 
-                # 컬럼명 표준화 (대소문자 통일)
+                # Standardize column names
                 df_filtered = df_filtered.rename(columns={
                     'Date': 'date',
                     'Open': 'open',
@@ -112,18 +112,18 @@ def check_and_setup_data():
                     'Volume': 'volume'
                 })
                 
-                # date를 인덱스로 설정
+                # Set date as index
                 df_filtered.set_index('date', inplace=True)
                 
-                # 저장
+                # Save
                 project_data_paths['ohlcv'].parent.mkdir(parents=True, exist_ok=True)
                 df_filtered.to_csv(project_data_paths['ohlcv'])
-                logger.info(f"  저장 완료: {project_data_paths['ohlcv']}")
+                logger.info(f"  Saved: {project_data_paths['ohlcv']}")
             else:
-                logger.warning(f"  ⚠ 논문 기간에 해당하는 데이터가 없습니다!")
-                logger.info(f"  전체 데이터를 사용합니다.")
+                logger.warning(f"  WARN No data for paper period!")
+                logger.info(f"  Using full dataset.")
                 
-                # 컬럼명 표준화
+                # Standardize column names
                 df = df.rename(columns={
                     'Date': 'date',
                     'Open': 'open',
@@ -136,33 +136,33 @@ def check_and_setup_data():
                 
                 project_data_paths['ohlcv'].parent.mkdir(parents=True, exist_ok=True)
                 df.to_csv(project_data_paths['ohlcv'])
-                logger.info(f"  저장 완료: {project_data_paths['ohlcv']}")
+                logger.info(f"  Saved: {project_data_paths['ohlcv']}")
                 
         except Exception as e:
-            logger.error(f"  OHLCV 데이터 처리 실패: {e}")
+            logger.error(f"  OHLCV data processing failed: {e}")
             import traceback
             logger.error(traceback.format_exc())
     else:
-        logger.error(f"✗ OHLCV 데이터 없음: {real_data_paths['ohlcv']}")
+        logger.error(f"FAIL OHLCV data missing: {real_data_paths['ohlcv']}")
     
-    # 3. 차트 이미지 확인
+    # 3. Check chart images
     if real_data_paths['charts'].exists():
-        logger.info(f"✓ 차트 이미지 디렉토리 발견: {real_data_paths['charts']}")
+        logger.info(f"OK Chart images directory found: {real_data_paths['charts']}")
         
-        # PNG 파일 개수 확인
+        # Count PNG files
         try:
             png_files = list(real_data_paths['charts'].rglob('*.png'))
-            logger.info(f"  PNG 파일 개수: {len(png_files)}")
+            logger.info(f"  PNG file count: {len(png_files)}")
             
             if len(png_files) > 0:
-                logger.info(f"  샘플 파일: {png_files[0].name}")
+                logger.info(f"  Sample file: {png_files[0].name}")
                 
-                # 심볼릭 링크 생성 (디렉토리)
+                # Create symbolic link (directory)
                 project_data_paths['charts'].parent.mkdir(parents=True, exist_ok=True)
                 
                 if not project_data_paths['charts'].exists():
                     try:
-                        # Windows에서는 디렉토리 심볼릭 링크
+                        # Directory symbolic link on Windows
                         import os
                         if os.name == 'nt':  # Windows
                             import subprocess
@@ -171,28 +171,28 @@ def check_and_setup_data():
                                 str(project_data_paths['charts']),
                                 str(real_data_paths['charts'])
                             ], check=True)
-                            logger.info(f"  디렉토리 심볼릭 링크 생성: {project_data_paths['charts']}")
+                            logger.info(f"  Directory symbolic link created: {project_data_paths['charts']}")
                         else:
                             project_data_paths['charts'].symlink_to(real_data_paths['charts'])
-                            logger.info(f"  심볼릭 링크 생성: {project_data_paths['charts']}")
+                            logger.info(f"  Symbolic link created: {project_data_paths['charts']}")
                     except Exception as e:
-                        logger.warning(f"  심볼릭 링크 생성 실패: {e}")
-                        logger.info(f"  직접 경로 사용을 권장합니다.")
+                        logger.warning(f"  Symbolic link creation failed: {e}")
+                        logger.info(f"  Recommend using the direct path.")
                 else:
-                    logger.info(f"  이미 존재: {project_data_paths['charts']}")
+                    logger.info(f"  Already exists: {project_data_paths['charts']}")
         except Exception as e:
-            logger.error(f"  차트 이미지 확인 실패: {e}")
+            logger.error(f"  Chart image check failed: {e}")
     else:
-        logger.error(f"✗ 차트 이미지 디렉토리 없음: {real_data_paths['charts']}")
+        logger.error(f"FAIL Chart images directory missing: {real_data_paths['charts']}")
     
     logger.info("=" * 100)
-    logger.info("데이터 통합 완료!")
+    logger.info("Data integration complete!")
     logger.info("=" * 100)
     
-    # Config 파일 업데이트 안내
-    logger.info("\n다음 단계:")
-    logger.info("1. config/config.yaml에서 데이터 경로 확인")
-    logger.info("2. 모델 학습 실행: python scripts/train.py --component all")
+    # Config update guidance
+    logger.info("\nNext steps:")
+    logger.info("1. Verify data paths in config/config.yaml")
+    logger.info("2. Run model training: python scripts/train.py --component all")
 
 
 if __name__ == "__main__":

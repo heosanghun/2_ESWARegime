@@ -1,6 +1,6 @@
 """
-진행률 1회 출력 (실시간 갱신 없음).
-reach_100 자율 실행 또는 train_and_verify 로그/진행 파일 기준.
+Print progress once (no live refresh).
+Based on reach_100 autonomous run or train_and_verify log/progress files.
 """
 import json
 import re
@@ -31,7 +31,7 @@ def main():
         except Exception:
             pass
 
-    # 2) reach_100 로그 파싱
+    # 2) Parse reach_100 log
     if LOG_100.exists():
         try:
             text = LOG_100.read_text(encoding="utf-8", errors="ignore")

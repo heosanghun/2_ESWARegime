@@ -1,8 +1,8 @@
 """
-최종 성능 검증 스크립트: 논문의 성능 지표와 실제 결과를 비교 검증.
+Final performance verification: compare paper metrics with actual results.
 
-논문 Table 2의 성능 지표와 실제 실행 결과를 비교하여
-논문과의 일치성을 검증합니다.
+Compares paper Table 2 performance metrics with actual run results
+to verify consistency with the paper.
 """
 
 import sys
@@ -28,7 +28,7 @@ from src.agents.agent_manager import HierarchicalAgentManager
 from src.evaluation.comprehensive_metrics import PerformanceMetrics
 from src.utils.logger import setup_logger
 
-# 로깅 설정
+# Logging setup
 log_dir = Path('results/verification')
 log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -43,7 +43,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# 논문 Table 2의 성능 지표 (Proposed Method)
+# Paper Table 2 performance metrics (Proposed Method)
 PAPER_METRICS = {
     'Proposed Method': {
         'Sharpe Ratio': 2.45,
@@ -121,22 +121,22 @@ PAPER_METRICS = {
 
 
 class FinalPerformanceVerifier:
-    """최종 성능 검증 클래스."""
+    """Final performance verification class."""
     
     def __init__(self, config_path: str = 'config/config.yaml'):
-        """초기화."""
+        """Initialize."""
         self.config_path = Path(config_path)
         self.config = self._load_config()
         self.results = {}
         
     def _load_config(self) -> Dict[str, Any]:
-        """Config 파일 로드."""
+        """Load config file."""
         config_dir = self.config_path.parent
         
         with open(self.config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
         
-        # Hyperparameters 로드
+        # Load hyperparameters
         hyperparams_path = config_dir / 'hyperparameters.yaml'
         if hyperparams_path.exists():
             with open(hyperparams_path, 'r', encoding='utf-8') as f:
@@ -147,31 +147,31 @@ class FinalPerformanceVerifier:
     
     def run_backtest(self, method_name: str = 'Proposed Method') -> Dict[str, float]:
         """
-        백테스트 실행 및 성능 지표 계산.
+        Run backtest and compute performance metrics.
         
         Parameters
         ----------
         method_name : str
-            평가할 방법 이름.
+            Method name to evaluate.
         
         Returns
         -------
         dict
-            성능 지표 딕셔너리.
+            Performance metrics dictionary.
         """
         logger.info(f"\n{'='*100}")
-        logger.info(f"백테스트 실행: {method_name}")
+        logger.info(f"Running backtest: {method_name}")
         logger.info(f"{'='*100}")
         
         try:
-            # 데이터 로드
+            # Load data
             data_handler = MarketDataHandler(self.config['data']['ohlcv_path'])
             ohlcv_data = data_handler.load_data(
                 start_date=self.config['training']['test_start_date'],
                 end_date=self.config['training']['test_end_date']
             )
             
-            # Feature 추출
+            # Extract features
             tech_extractor = TechnicalFeatureExtractor()
             visual_extractor = CandlestickGenerator()
             sentiment_extractor = NewsSentimentExtractor(self.config['data']['news_path'])
@@ -183,12 +183,12 @@ class FinalPerformanceVerifier:
             feature_fusion = FeatureFusion(tech_extractor, visual_extractor, sentiment_extractor)
             state_data = feature_fusion.batch_create_unified_states(ohlcv_data, ohlcv_data.index)
             
-            # Proposed Method의 경우 전체 시스템 실행
+            # For Proposed Method, run full system
             if method_name == 'Proposed Method':
-                # Regime Classifier 로드
+                # Load regime classifier
                 regime_model_path = Path(self.config['models']['regime_classifier']) / 'model.json'
                 if not regime_model_path.exists():
-                    logger.error(f"Regime Classifier 모델 없음: {regime_model_path}")
+                    logger.error(f"Regime Classifier model not found: {regime_model_path}")
                     return {}
                 
                 classifier = RegimeClassifier(
@@ -198,26 +198,26 @@ class FinalPerformanceVerifier:
                 )
                 classifier.load_model(str(regime_model_path))
                 
-                # PPO Agents 로드
+                # Load PPO agents
                 agent_manager = HierarchicalAgentManager(
                     bull_env=None,  # Will be created per step
                     bear_env=None,
                     sideways_env=None,
                     num_agents_per_pool=self.config['ensemble']['num_agents_per_pool']
                 )
-                # 실제로는 환경이 필요하므로 여기서는 간단한 시뮬레이션
-                logger.info("  전체 시스템 실행 (간소화된 버전)")
+                # Environment is required in practice; simplified simulation here
+                logger.info("  Running full system (simplified version)")
                 
-                # 간단한 성능 계산 (실제로는 trading history 필요)
-                # 여기서는 예시로 논문 값에 약간의 변동을 추가
+                # Simple performance calculation (trading history required in practice)
+                # Example: add slight variation to paper values
                 metrics = PerformanceMetrics()
                 
-                # 샘플 수익률 생성 (실제로는 trading history에서 계산)
-                # 이 부분은 실제 트레이딩 실행 후 완성되어야 함
-                logger.warning("  실제 트레이딩 실행이 필요합니다. 현재는 샘플 데이터로 검증합니다.")
+                # Generate sample returns (computed from trading history in production)
+                # Must be completed after actual trading execution
+                logger.warning("  Actual trading execution required. Using sample data for verification.")
                 
-                # 샘플 성능 지표 (실제 구현 시 교체 필요)
-                sample_returns = np.random.normal(0.001, 0.02, len(state_data))  # 샘플
+                # Sample performance metrics (replace in real implementation)
+                sample_returns = np.random.normal(0.001, 0.02, len(state_data))  # sample
                 sample_equity = np.cumprod(1 + sample_returns) * self.config['training']['initial_capital']
                 
                 metrics.calculate_metrics(
@@ -234,40 +234,40 @@ class FinalPerformanceVerifier:
                     'Profit Factor': metrics.profit_factor
                 }
             else:
-                logger.info(f"  {method_name}는 별도 구현 필요")
+                logger.info(f"  {method_name} requires separate implementation")
                 return {}
                 
         except Exception as e:
-            logger.error(f"백테스트 실행 실패: {e}")
+            logger.error(f"Backtest failed: {e}")
             import traceback
             logger.error(traceback.format_exc())
             return {}
     
     def compare_with_paper(self, actual_metrics: Dict[str, float], method_name: str = 'Proposed Method') -> Dict[str, Any]:
         """
-        실제 결과와 논문 결과 비교.
+        Compare actual results with paper results.
         
         Parameters
         ----------
         actual_metrics : dict
-            실제 계산된 성능 지표.
+            Computed performance metrics.
         method_name : str
-            방법 이름.
+            Method name.
         
         Returns
         -------
         dict
-            비교 결과.
+            Comparison results.
         """
         if method_name not in PAPER_METRICS:
-            logger.error(f"알 수 없는 방법: {method_name}")
+            logger.error(f"Unknown method: {method_name}")
             return {}
         
         paper_metrics = PAPER_METRICS[method_name]
         comparison = {}
         
         tolerance = {
-            'Sharpe Ratio': 0.2,  # ±0.2 허용 오차
+            'Sharpe Ratio': 0.2,  # +/-0.2 tolerance
             'Cumulative Return': 0.1,
             'CAGR': 0.05,
             'Maximum Drawdown': 0.05,
@@ -276,7 +276,7 @@ class FinalPerformanceVerifier:
         }
         
         logger.info(f"\n{'='*100}")
-        logger.info(f"논문과 비교: {method_name}")
+        logger.info(f"Comparison with paper: {method_name}")
         logger.info(f"{'='*100}")
         
         for metric_name in paper_metrics.keys():
@@ -291,7 +291,7 @@ class FinalPerformanceVerifier:
                     'match': False,
                     'status': 'missing'
                 }
-                logger.warning(f"  ✗ {metric_name}: 논문={paper_value:.3f}, 실제=없음")
+                logger.warning(f"  x {metric_name}: paper={paper_value:.3f}, actual=missing")
             else:
                 diff = abs(actual_value - paper_value)
                 tol = tolerance.get(metric_name, 0.1)
@@ -306,17 +306,17 @@ class FinalPerformanceVerifier:
                     'status': 'match' if match else 'mismatch'
                 }
                 
-                status_symbol = "✓" if match else "✗"
+                status_symbol = "OK" if match else "X"
                 logger.info(
                     f"  {status_symbol} {metric_name}: "
-                    f"논문={paper_value:.3f}, 실제={actual_value:.3f}, "
-                    f"차이={diff:.3f} (허용={tol:.3f})"
+                    f"paper={paper_value:.3f}, actual={actual_value:.3f}, "
+                    f"diff={diff:.3f} (tolerance={tol:.3f})"
                 )
         
         return comparison
     
     def generate_comparison_table(self, comparisons: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
-        """비교 결과를 테이블로 생성."""
+        """Build comparison results as a table."""
         rows = []
         
         for method_name, comparison in comparisons.items():
@@ -326,9 +326,9 @@ class FinalPerformanceVerifier:
                 if metric_data.get('status') == 'missing':
                     row[metric_name] = f"{metric_data['paper']:.3f} (N/A)"
                 elif metric_data.get('match'):
-                    row[metric_name] = f"{metric_data['actual']:.3f} ✓"
+                    row[metric_name] = f"{metric_data['actual']:.3f} OK"
                 else:
-                    row[metric_name] = f"{metric_data['actual']:.3f} ✗"
+                    row[metric_name] = f"{metric_data['actual']:.3f} X"
             
             rows.append(row)
         
@@ -336,36 +336,36 @@ class FinalPerformanceVerifier:
         return df
     
     def generate_final_report(self) -> str:
-        """최종 리포트 생성."""
+        """Generate final report."""
         report_lines = []
         report_lines.append("=" * 100)
-        report_lines.append("최종 성능 검증 리포트")
-        report_lines.append(f"생성 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report_lines.append("Final Performance Verification Report")
+        report_lines.append(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         report_lines.append("=" * 100)
         
-        report_lines.append("\n논문 성능 지표 (Table 2)")
+        report_lines.append("\nPaper performance metrics (Table 2)")
         report_lines.append("-" * 100)
         
-        # 논문 지표 표시
+        # Show paper metrics
         for method_name, metrics in PAPER_METRICS.items():
             report_lines.append(f"\n{method_name}:")
             for metric_name, value in metrics.items():
                 report_lines.append(f"  {metric_name}: {value:.3f}")
         
         report_lines.append("\n" + "=" * 100)
-        report_lines.append("\n주의: 실제 트레이딩 실행 및 성능 계산이 완료되어야")
-        report_lines.append("논문과의 정확한 비교가 가능합니다.")
-        report_lines.append("\n현재는 데이터 준비 및 코드 검증이 완료된 상태입니다.")
+        report_lines.append("\nNote: Actual trading execution and performance calculation must be completed")
+        report_lines.append("before an accurate comparison with the paper is possible.")
+        report_lines.append("\nData preparation and code verification are currently complete.")
         report_lines.append("=" * 100)
         
         report_text = "\n".join(report_lines)
         
-        # 파일로 저장
+        # Save to file
         report_path = log_dir / 'final_performance_report.txt'
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report_text)
         
-        logger.info(f"\n리포트 저장: {report_path}")
+        logger.info(f"\nReport saved: {report_path}")
         
         return report_text
 
@@ -384,19 +384,19 @@ def main():
     
     verifier = FinalPerformanceVerifier(args.config)
     
-    # 백테스트 실행
+    # Run backtest
     actual_metrics = verifier.run_backtest(args.method)
     
-    # 논문과 비교
+    # Compare with paper
     if actual_metrics:
         comparison = verifier.compare_with_paper(actual_metrics, args.method)
         verifier.results[args.method] = comparison
     
-    # 리포트 생성
+    # Generate report
     report = verifier.generate_final_report()
     
-    logger.info("\n최종 성능 검증 완료!")
-    logger.info("실제 트레이딩 실행 후 정확한 비교가 가능합니다.")
+    logger.info("\nFinal performance verification complete!")
+    logger.info("Accurate comparison is possible after actual trading execution.")
 
 
 if __name__ == "__main__":

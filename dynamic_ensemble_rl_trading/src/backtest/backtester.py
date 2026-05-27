@@ -71,7 +71,7 @@ class Backtester:
                 'low': 'low', 'close': 'close', 'volume': 'volume',
             }
 
-        # ── build aligned price series (effective_weight 지원) ──
+        # Build aligned price series (supports effective_weight)
         prices = []
         actions = []
         valid_ts = []
@@ -91,7 +91,7 @@ class Backtester:
         prices = np.array(prices)
         n = len(prices)
 
-        # ── convert actions → weights (effective_weight 우선) ──
+        # Convert actions to weights (prefer effective_weight when set)
         lo, hi = (-self.max_position, self.max_position) if self.allow_short else (0.0, self.max_position)
         if any(w is not None for w in eff_weights):
             weights = np.array([

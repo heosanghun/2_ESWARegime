@@ -1,7 +1,7 @@
 """
-100% 일치 달성을 위한 자동 개선 파이프라인.
+Automatic improvement pipeline to reach 100% consistency.
 
-단계별로 문제를 해결하고 성능을 개선하여 논문 성과지표와 100% 일치를 달성.
+Resolves issues step by step and improves performance to match paper metrics at 100%.
 """
 
 import sys
@@ -42,7 +42,7 @@ PAPER_METRICS = {
 
 
 def calculate_consistency(paper_val: float, actual_val: float) -> float:
-    """일치성 퍼센트 계산."""
+    """Calculate consistency percentage."""
     if actual_val is None:
         return 0.0
     scale = max(abs(paper_val), 0.01)
@@ -51,7 +51,7 @@ def calculate_consistency(paper_val: float, actual_val: float) -> float:
 
 
 def analyze_gaps(actual: Dict[str, float]) -> Dict[str, Any]:
-    """성능 차이 분석 및 개선 방향 제시."""
+    """Analyze performance gaps and suggest improvements."""
     gaps = {}
     for k, paper_val in PAPER_METRICS.items():
         act = actual.get(k, 0.0)
@@ -67,38 +67,38 @@ def analyze_gaps(actual: Dict[str, float]) -> Dict[str, Any]:
 
 
 def suggest_improvements(gaps: Dict[str, Any]) -> list:
-    """개선 제안 생성."""
+    """Generate improvement suggestions."""
     suggestions = []
     
-    # Sharpe Ratio, Cumulative Return, CAGR가 모두 음수
+    # Sharpe Ratio, Cumulative Return, CAGR all negative
     if gaps['Sharpe Ratio']['actual'] < 0:
         suggestions.append({
             'priority': 'CRITICAL',
-            'issue': '전략이 손실 발생 (Sharpe Ratio 음수)',
-            'action': '1M 학습 완료 대기 또는 하이퍼파라미터 튜닝',
+            'issue': 'Strategy is losing (negative Sharpe Ratio)',
+            'action': 'Wait for 1M training to finish or tune hyperparameters',
             'params': {
                 'ensemble_temperature': [5.0, 10.0, 15.0],
                 'reward_scale': [50.0, 100.0, 200.0],
             }
         })
     
-    # Win Rate 낮음
+    # Low win rate
     if gaps['Win Rate']['actual'] < 0.45:
         suggestions.append({
             'priority': 'HIGH',
-            'issue': 'Win Rate 낮음 (거래 타이밍 부정확)',
-            'action': 'Regime 분류 정확도 향상, Confidence Threshold 조정',
+            'issue': 'Low win rate (inaccurate trade timing)',
+            'action': 'Improve regime classification accuracy, adjust confidence threshold',
             'params': {
                 'confidence_threshold': [0.5, 0.6, 0.7],
             }
         })
     
-    # MDD 큼
+    # Large MDD
     if gaps['Maximum Drawdown']['actual'] < -0.20:
         suggestions.append({
             'priority': 'HIGH',
-            'issue': 'Maximum Drawdown 과다',
-            'action': '리스크 관리 강화, 포지션 크기 제한',
+            'issue': 'Excessive maximum drawdown',
+            'action': 'Strengthen risk management, limit position size',
             'params': {
                 'max_position': [0.75, 0.85, 0.95],
             }
@@ -108,15 +108,15 @@ def suggest_improvements(gaps: Dict[str, Any]) -> list:
 
 
 def main():
-    """자동 개선 파이프라인 실행."""
+    """Run automatic improvement pipeline."""
     logger.info("=" * 60)
-    logger.info("100% 일치 달성을 위한 자동 개선 파이프라인 시작")
+    logger.info("Starting automatic improvement pipeline for 100% consistency")
     logger.info("=" * 60)
     
     cfg = load_config()
     
-    # 현재 성능 확인
-    logger.info("Step 1: 현재 성능 확인")
+    # Check current performance
+    logger.info("Step 1: Check current performance")
     results = step3_backtest(cfg)
     metrics = results['metrics']
     
@@ -130,23 +130,23 @@ def main():
     }
     
     avg_consistency, _ = step4_compare(results)
-    logger.info(f"현재 평균 일치성: {avg_consistency:.1f}%")
+    logger.info(f"Current average consistency: {avg_consistency:.1f}%")
     
-    # 차이 분석
-    logger.info("\nStep 2: 성능 차이 분석")
+    # Gap analysis
+    logger.info("\nStep 2: Performance gap analysis")
     gaps = analyze_gaps(actual)
     for k, v in gaps.items():
-        logger.info(f"  {k}: 논문={v['paper']:.4f}, 실제={v['actual']:.4f}, 일치성={v['consistency']:.1f}%")
+        logger.info(f"  {k}: paper={v['paper']:.4f}, actual={v['actual']:.4f}, consistency={v['consistency']:.1f}%")
     
-    # 개선 제안
-    logger.info("\nStep 3: 개선 제안 생성")
+    # Improvement suggestions
+    logger.info("\nStep 3: Generate improvement suggestions")
     suggestions = suggest_improvements(gaps)
     for i, s in enumerate(suggestions, 1):
-        logger.info(f"\n  제안 {i} [{s['priority']}]: {s['issue']}")
-        logger.info(f"    조치: {s['action']}")
-        logger.info(f"    튜닝 파라미터: {s['params']}")
+        logger.info(f"\n  Suggestion {i} [{s['priority']}]: {s['issue']}")
+        logger.info(f"    Action: {s['action']}")
+        logger.info(f"    Tuning parameters: {s['params']}")
     
-    # 결과 저장
+    # Save results
     out_dir = Path('results/verification')
     report = {
         'current_metrics': actual,
@@ -159,8 +159,8 @@ def main():
     with open(out_dir / 'improvement_analysis.json', 'w', encoding='utf-8') as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
     
-    logger.info(f"\n분석 결과 저장: {out_dir / 'improvement_analysis.json'}")
-    logger.info("\n다음 단계: 제안된 파라미터로 튜닝 후 재평가")
+    logger.info(f"\nAnalysis saved: {out_dir / 'improvement_analysis.json'}")
+    logger.info("\nNext step: tune with suggested parameters and re-evaluate")
 
 
 if __name__ == '__main__':

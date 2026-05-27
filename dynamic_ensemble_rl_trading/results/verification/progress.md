@@ -1,31 +1,31 @@
-# 학습/검증 파이프라인 진행률
+# Training / verification pipeline progress
 
-**갱신 시각:** 2026-02-12 14:57:47
+**Updated:** 2026-02-12 14:57:47
 
-## 전체 단계
-| 단계 | 내용 | 상태 |
-|------|------|------|
-| 1 | Regime Classifier 학습 | 완료 |
-| 2 | PPO Agents 학습 (15개) | 진행 중 |
-| 3 | 테스트 기간 백테스트 | 대기 |
-| 4 | 논문 Table 2 비교 | 대기 |
-| 5 | 완료 | 대기 |
+## Overall stages
+| Stage | Task | Status |
+|-------|------|--------|
+| 1 | Train regime classifier | Complete |
+| 2 | Train PPO agents (15) | In progress |
+| 3 | Test-period backtest | Pending |
+| 4 | Manuscript Table 2 comparison | Pending |
+| 5 | Done | Pending |
 
-## STEP 2 상세 (PPO Agents)
+## STEP 2 detail (PPO agents)
 
-- **진행:** 4/15 에이전트 (26.7%)
+- **Progress:** 4/15 agents (26.7%)
 - `[########----------------------]`
-- **현재:** PPO Agents — Bull pool Agent 5/5
+- **Current:** PPO Agents — Bull pool Agent 5/5
 
-- 예상 남은 시간: 약 352분 (5.9시간)
+- Estimated time remaining: ~352 minutes (5.9 hours)
 
-## Pool별 진행 (1M run)
+## Per-pool progress (1M run)
 
-| Pool     | 진행     | 비고       |
-|----------|----------|------------|
-| Bull     | 4/5 완료 | 5/5 학습 중 |
-| Bear     | 0/5      | 대기       |
-| Sideways | 0/5      | 대기       |
+| Pool     | Progress | Notes        |
+|----------|----------|--------------|
+| Bull     | 4/5 done | training 5/5 |
+| Bear     | 0/5      | Pending      |
+| Sideways | 0/5      | Pending      |
 
 ---
-*이 파일은 `python scripts/show_progress.py` 실행 시 갱신됩니다.*
+*This file is refreshed when you run `python scripts/show_progress.py`.*

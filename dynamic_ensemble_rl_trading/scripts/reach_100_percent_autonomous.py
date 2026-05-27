@@ -1,8 +1,8 @@
 """
-100% 일치 달성을 위한 자율 셀프검증 스크립트.
+Autonomous self-verification script to maximize paper metric alignment.
 
-수단과 방법을 가리지 않고 파라미터 탐색 및 셀프검증을 반복하여
-논문 성과지표와의 일치성을 최대한 높인다.
+Repeatedly searches parameters and self-verifies to raise consistency with
+published performance figures.
 
 DEPRECATED (2026-05-15) — DO NOT USE
 =====================================
@@ -139,7 +139,7 @@ def run_backtest_and_metrics():
 
 def main():
     logger.info("=" * 60)
-    logger.info("100% 일치 자율 셀프검증 시작")
+    logger.info("Starting 100% consistency autonomous self-verification")
     logger.info("=" * 60)
     write_progress(0, MAX_ROUNDS, 0.0, 0.0, 0.0, 'start', 'running')
 
