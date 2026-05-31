@@ -60,7 +60,7 @@ def generate_ohlcv_data(
     # Build date range (hourly)
     start = pd.to_datetime(start_date)
     end = pd.to_datetime(end_date)
-    timestamps = pd.date_range(start=start, end=end, freq='H')
+    timestamps = pd.date_range(start=start, end=end, freq='h')
     
     logger.info(f"Total timestamps: {len(timestamps)}")
     

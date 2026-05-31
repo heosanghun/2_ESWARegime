@@ -60,6 +60,7 @@ class HierarchicalAgentManager:
             base_seed=base_seed,
             agent_kwargs=agent_kwargs
         )
+        self.bull_pool.pool_name = 'Bull'
         
         self.bear_pool = PPOAgentPool(
             env=bear_env,
@@ -67,6 +68,7 @@ class HierarchicalAgentManager:
             base_seed=base_seed + 100,  # Different seed range
             agent_kwargs=agent_kwargs
         )
+        self.bear_pool.pool_name = 'Bear'
         
         self.sideways_pool = PPOAgentPool(
             env=sideways_env,
@@ -74,6 +76,7 @@ class HierarchicalAgentManager:
             base_seed=base_seed + 200,  # Different seed range
             agent_kwargs=agent_kwargs
         )
+        self.sideways_pool.pool_name = 'Sideways'
         
         logger.info(
             f"Initialized hierarchical agent manager with "

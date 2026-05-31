@@ -17,7 +17,7 @@ from src.data.feature_extractor import TechnicalFeatureExtractor
 @pytest.fixture
 def sample_ohlcv_data():
     """Create sample OHLCV data for testing."""
-    dates = pd.date_range('2021-01-01', periods=100, freq='H')
+    dates = pd.date_range('2021-01-01', periods=100, freq='h')
     data = pd.DataFrame({
         'open': 100 + np.random.randn(100).cumsum(),
         'high': 101 + np.random.randn(100).cumsum(),
@@ -37,7 +37,7 @@ def test_market_data_handler(sample_ohlcv_data, tmp_path):
     """Test MarketDataHandler."""
     # Save sample data
     data_path = tmp_path / 'test_data.csv'
-    sample_ohlcv_data.to_csv(data_path)
+    sample_ohlcv_data.to_csv(data_path, index_label='date')
     
     # Test loading
     handler = MarketDataHandler(str(data_path))
@@ -61,16 +61,16 @@ def test_technical_feature_extractor(sample_ohlcv_data):
 def test_walk_forward_split(sample_ohlcv_data, tmp_path):
     """Test Walk-Forward splitting."""
     data_path = tmp_path / 'test_data.csv'
-    sample_ohlcv_data.to_csv(data_path)
+    sample_ohlcv_data.to_csv(data_path, index_label='date')
     
     handler = MarketDataHandler(str(data_path))
     handler.load_data()
     
     train, val, test = handler.get_walk_forward_splits(
         train_start='2021-01-01',
-        train_end='2021-01-20',
-        test_start='2021-01-21',
-        test_end='2021-01-25',
+        train_end='2021-01-03',
+        test_start='2021-01-04',
+        test_end='2021-01-05',
         validation_ratio=0.2
     )
     

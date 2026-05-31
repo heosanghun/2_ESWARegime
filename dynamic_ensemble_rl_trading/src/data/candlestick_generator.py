@@ -70,8 +70,12 @@ class CandlestickGenerator:
         
         logger.info("Loading ResNet-18 model (ImageNet pre-trained)")
         
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        logger.info(f"Using device: {self.device} for visual feature extraction")
+
         # Load pre-trained ResNet-18
         self.resnet_model = models.resnet18(pretrained=True)
+        self.resnet_model = self.resnet_model.to(self.device)
         self.resnet_model.eval()
         
         # Remove the final classification layer to get features
@@ -232,12 +236,12 @@ class CandlestickGenerator:
             image = Image.fromarray(image.astype(np.uint8))
         
         # Apply transforms
-        image_tensor = self.transform(image).unsqueeze(0)
+        image_tensor = self.transform(image).unsqueeze(0).to(self.device)
         
         # Extract features
         with torch.no_grad():
             features = self.resnet_model(image_tensor)
-            features = features.squeeze().numpy()
+            features = features.squeeze().cpu().numpy()
         
         return features
     
@@ -302,7 +306,21 @@ class CandlestickGenerator:
         features_list = []
         valid_timestamps = []
         
+        import time
+        t_start = time.time()
+        last_print_time = t_start
+        total = len(timestamps)
+        
         for i, timestamp in enumerate(timestamps):
+            t_now = time.time()
+            if t_now - last_print_time >= 10.0 or i == 0 or i == total - 1:
+                pct = (i + 1) / total * 100
+                bar_len = 30
+                filled = int(bar_len * (i + 1) / total)
+                bar = "#" * filled + "-" * (bar_len - filled)
+                print(f"[Visual Extractor Progress] [{bar}] {i+1}/{total} ({pct:.1f}%) | Elapsed: {t_now - t_start:.1f}s", flush=True)
+                last_print_time = t_now
+                
             try:
                 features = self.process_timestamp(
                     ohlcv_data, timestamp, ohlcv_columns

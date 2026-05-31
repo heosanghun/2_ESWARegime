@@ -17,7 +17,7 @@ from src.env.rewards import RegimeRewardCalculator
 @pytest.fixture
 def sample_ohlcv_data():
     """Create sample OHLCV data."""
-    dates = pd.date_range('2021-01-01', periods=100, freq='H')
+    dates = pd.date_range('2021-01-01', periods=100, freq='h')
     data = pd.DataFrame({
         'open': 100 + np.random.randn(100).cumsum(),
         'high': 101 + np.random.randn(100).cumsum(),
@@ -35,7 +35,7 @@ def sample_ohlcv_data():
 @pytest.fixture
 def sample_state_data():
     """Create sample state data."""
-    dates = pd.date_range('2021-01-01', periods=100, freq='H')
+    dates = pd.date_range('2021-01-01', periods=100, freq='h')
     state_dim = 100
     states = np.random.randn(100, state_dim)
     return pd.DataFrame(states, index=dates)
@@ -74,7 +74,7 @@ def test_trading_env_reset(sample_ohlcv_data, sample_state_data):
 
 def test_reward_calculator_bull(sample_ohlcv_data, sample_state_data):
     """Test Bull market reward calculation."""
-    calculator = RegimeRewardCalculator()
+    calculator = RegimeRewardCalculator(reward_scale=1.0)
     
     reward = calculator.calculate_bull_reward(
         portfolio_value_before=10000.0,

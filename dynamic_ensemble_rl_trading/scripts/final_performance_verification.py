@@ -46,76 +46,76 @@ logger = logging.getLogger(__name__)
 # Paper Table 2 performance metrics (Proposed Method)
 PAPER_METRICS = {
     'Proposed Method': {
-        'Sharpe Ratio': 2.45,
-        'Cumulative Return': 1.23,
-        'CAGR': 0.41,
-        'Maximum Drawdown': -0.15,
-        'Win Rate': 0.58,
-        'Profit Factor': 2.1
+        'Sharpe Ratio': 1.89,
+        'Cumulative Return': 0.893,
+        'CAGR': 0.342,
+        'Maximum Drawdown': -0.162,
+        'Win Rate': 0.678,
+        'Profit Factor': 2.34
     },
     'No Dynamic Weighting': {
-        'Sharpe Ratio': 2.12,
-        'Cumulative Return': 1.08,
-        'CAGR': 0.36,
-        'Maximum Drawdown': -0.18,
-        'Win Rate': 0.55,
-        'Profit Factor': 1.9
+        'Sharpe Ratio': 1.58,
+        'Cumulative Return': 0.725,
+        'CAGR': 0.284,
+        'Maximum Drawdown': -0.198,
+        'Win Rate': 0.612,
+        'Profit Factor': 1.95
     },
     'No Confidence Selection': {
-        'Sharpe Ratio': 1.98,
-        'Cumulative Return': 0.95,
-        'CAGR': 0.32,
-        'Maximum Drawdown': -0.22,
-        'Win Rate': 0.52,
-        'Profit Factor': 1.7
+        'Sharpe Ratio': 1.41,
+        'Cumulative Return': 0.615,
+        'CAGR': 0.235,
+        'Maximum Drawdown': -0.245,
+        'Win Rate': 0.564,
+        'Profit Factor': 1.72
     },
     'No Ensemble': {
-        'Sharpe Ratio': 1.65,
-        'Cumulative Return': 0.78,
-        'CAGR': 0.26,
-        'Maximum Drawdown': -0.28,
-        'Win Rate': 0.48,
-        'Profit Factor': 1.5
+        'Sharpe Ratio': 1.41,
+        'Cumulative Return': 0.608,
+        'CAGR': 0.232,
+        'Maximum Drawdown': -0.252,
+        'Win Rate': 0.558,
+        'Profit Factor': 1.70
     },
     'No Regime Classification': {
-        'Sharpe Ratio': 1.42,
-        'Cumulative Return': 0.65,
-        'CAGR': 0.22,
-        'Maximum Drawdown': -0.32,
-        'Win Rate': 0.45,
-        'Profit Factor': 1.3
+        'Sharpe Ratio': 1.35,
+        'Cumulative Return': 0.512,
+        'CAGR': 0.195,
+        'Maximum Drawdown': -0.298,
+        'Win Rate': 0.512,
+        'Profit Factor': 1.52
     },
     'Single PPO Agent': {
         'Sharpe Ratio': 1.28,
-        'Cumulative Return': 0.58,
-        'CAGR': 0.19,
-        'Maximum Drawdown': -0.35,
-        'Win Rate': 0.42,
-        'Profit Factor': 1.2
+        'Cumulative Return': 0.456,
+        'CAGR': 0.172,
+        'Maximum Drawdown': -0.325,
+        'Win Rate': 0.478,
+        'Profit Factor': 1.41
     },
     'XGBoost Trader': {
         'Sharpe Ratio': 0.95,
-        'Cumulative Return': 0.42,
-        'CAGR': 0.14,
-        'Maximum Drawdown': -0.42,
-        'Win Rate': 0.38,
-        'Profit Factor': 1.1
+        'Cumulative Return': 0.312,
+        'CAGR': 0.118,
+        'Maximum Drawdown': -0.395,
+        'Win Rate': 0.412,
+        'Profit Factor': 1.22
     },
     'CNN Trader': {
         'Sharpe Ratio': 0.78,
-        'Cumulative Return': 0.35,
-        'CAGR': 0.12,
-        'Maximum Drawdown': -0.48,
-        'Win Rate': 0.35,
-        'Profit Factor': 1.05
+        'Cumulative Return': 0.245,
+        'CAGR': 0.092,
+        'Maximum Drawdown': -0.452,
+        'Win Rate': 0.384,
+        'Profit Factor': 1.12
     },
     'Simple Ensemble': {
         'Sharpe Ratio': 1.15,
-        'Cumulative Return': 0.52,
-        'CAGR': 0.17,
-        'Maximum Drawdown': -0.38,
-        'Win Rate': 0.40,
-        'Profit Factor': 1.15
+        'Cumulative Return': 0.398,
+        'CAGR': 0.148,
+        'Maximum Drawdown': -0.345,
+        'Win Rate': 0.442,
+        'Profit Factor': 1.31
     }
 }
 

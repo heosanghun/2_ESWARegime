@@ -17,7 +17,7 @@ from src.regime.regime_classifier import RegimeClassifier
 @pytest.fixture
 def sample_price_data():
     """Create sample price data for testing."""
-    dates = pd.date_range('2021-01-01', periods=100, freq='H')
+    dates = pd.date_range('2021-01-01', periods=100, freq='h')
     # Create trending price data
     trend = np.linspace(100, 150, 100)
     noise = np.random.randn(100) * 2
@@ -92,5 +92,38 @@ def test_confidence_based_selection():
     except (ValueError, AttributeError):
         # Expected if model not actually fitted
         pass
+
+
+def test_sequential_regime_classifier():
+    """Test SequentialRegimeClassifier initialization and training."""
+    from src.regime.sequential_regime_classifier import SequentialRegimeClassifier
+    classifier = SequentialRegimeClassifier(
+        sequence_window=5,
+        n_features=10,
+        hidden_dim=8,
+        num_layers=1,
+        max_epochs=2,
+        use_visual=False,
+    )
+    
+    assert classifier.sequence_window == 5
+    assert classifier.n_features == 10
+    assert not classifier.is_fitted
+    
+    # Create sequence training data
+    X = np.random.randn(20, 5, 10)
+    y = np.random.randint(0, 3, 20)
+    
+    classifier.fit(X, y)
+    assert classifier.is_fitted
+    
+    # Observe states and predict
+    state = np.random.randn(10)
+    classifier.observe_state(state)
+    
+    # Mocking or predicting
+    proba = classifier.predict_proba(X[0:1])
+    assert proba.shape == (1, 3)
+
 
 

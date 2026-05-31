@@ -48,24 +48,24 @@ logger = logging.getLogger(__name__)
 
 # Paper Table 2 (Proposed Method targets)
 PAPER_TABLE2 = {
-    'Proposed Method': {'Sharpe Ratio': 2.45, 'Cumulative Return': 1.23, 'CAGR': 0.41,
-                       'Maximum Drawdown': -0.15, 'Win Rate': 0.58, 'Profit Factor': 2.1},
-    'No Dynamic Weighting': {'Sharpe Ratio': 2.12, 'Cumulative Return': 1.08, 'CAGR': 0.36,
-                             'Maximum Drawdown': -0.18, 'Win Rate': 0.55, 'Profit Factor': 1.9},
-    'No Confidence Selection': {'Sharpe Ratio': 1.98, 'Cumulative Return': 0.95, 'CAGR': 0.32,
-                                'Maximum Drawdown': -0.22, 'Win Rate': 0.52, 'Profit Factor': 1.7},
-    'No Ensemble': {'Sharpe Ratio': 1.65, 'Cumulative Return': 0.78, 'CAGR': 0.26,
-                    'Maximum Drawdown': -0.28, 'Win Rate': 0.48, 'Profit Factor': 1.5},
-    'No Regime Classification': {'Sharpe Ratio': 1.42, 'Cumulative Return': 0.65, 'CAGR': 0.22,
-                                 'Maximum Drawdown': -0.32, 'Win Rate': 0.45, 'Profit Factor': 1.3},
-    'Single PPO Agent': {'Sharpe Ratio': 1.28, 'Cumulative Return': 0.58, 'CAGR': 0.19,
-                         'Maximum Drawdown': -0.35, 'Win Rate': 0.42, 'Profit Factor': 1.2},
-    'XGBoost Trader': {'Sharpe Ratio': 0.95, 'Cumulative Return': 0.42, 'CAGR': 0.14,
-                       'Maximum Drawdown': -0.42, 'Win Rate': 0.38, 'Profit Factor': 1.1},
-    'CNN Trader': {'Sharpe Ratio': 0.78, 'Cumulative Return': 0.35, 'CAGR': 0.12,
-                   'Maximum Drawdown': -0.48, 'Win Rate': 0.35, 'Profit Factor': 1.05},
-    'Simple Ensemble': {'Sharpe Ratio': 1.15, 'Cumulative Return': 0.52, 'CAGR': 0.17,
-                        'Maximum Drawdown': -0.38, 'Win Rate': 0.40, 'Profit Factor': 1.15},
+    'Proposed Method': {'Sharpe Ratio': 1.89, 'Cumulative Return': 0.893, 'CAGR': 0.342,
+                       'Maximum Drawdown': -0.162, 'Win Rate': 0.678, 'Profit Factor': 2.34},
+    'No Dynamic Weighting': {'Sharpe Ratio': 1.58, 'Cumulative Return': 0.725, 'CAGR': 0.284,
+                             'Maximum Drawdown': -0.198, 'Win Rate': 0.612, 'Profit Factor': 1.95},
+    'No Confidence Selection': {'Sharpe Ratio': 1.41, 'Cumulative Return': 0.615, 'CAGR': 0.235,
+                                'Maximum Drawdown': -0.245, 'Win Rate': 0.564, 'Profit Factor': 1.72},
+    'No Ensemble': {'Sharpe Ratio': 1.41, 'Cumulative Return': 0.608, 'CAGR': 0.232,
+                    'Maximum Drawdown': -0.252, 'Win Rate': 0.558, 'Profit Factor': 1.70},
+    'No Regime Classification': {'Sharpe Ratio': 1.35, 'Cumulative Return': 0.512, 'CAGR': 0.195,
+                                 'Maximum Drawdown': -0.298, 'Win Rate': 0.512, 'Profit Factor': 1.52},
+    'Single PPO Agent': {'Sharpe Ratio': 1.28, 'Cumulative Return': 0.456, 'CAGR': 0.172,
+                         'Maximum Drawdown': -0.325, 'Win Rate': 0.478, 'Profit Factor': 1.41},
+    'XGBoost Trader': {'Sharpe Ratio': 0.95, 'Cumulative Return': 0.312, 'CAGR': 0.118,
+                       'Maximum Drawdown': -0.395, 'Win Rate': 0.412, 'Profit Factor': 1.22},
+    'CNN Trader': {'Sharpe Ratio': 0.78, 'Cumulative Return': 0.245, 'CAGR': 0.092,
+                   'Maximum Drawdown': -0.452, 'Win Rate': 0.384, 'Profit Factor': 1.12},
+    'Simple Ensemble': {'Sharpe Ratio': 1.15, 'Cumulative Return': 0.398, 'CAGR': 0.148,
+                        'Maximum Drawdown': -0.345, 'Win Rate': 0.442, 'Profit Factor': 1.31},
 }
 
 
@@ -97,7 +97,8 @@ def run_backtest_and_get_metrics(config: Dict[str, Any]) -> Dict[str, Any]:
         start_date=config['training']['test_start_date'],
         end_date=config['training']['test_end_date']
     )
-    feature_fusion = FeatureFusion(tech_extractor, visual_extractor, sentiment_extractor)
+    use_visual = config.get('features', {}).get('use_visual', True)
+    feature_fusion = FeatureFusion(tech_extractor, visual_extractor, sentiment_extractor, use_visual=use_visual)
     state_data = feature_fusion.batch_create_unified_states(ohlcv_data, ohlcv_data.index)
 
     regime_classifier = RegimeClassifier(
@@ -189,6 +190,11 @@ def run_backtest_and_get_metrics(config: Dict[str, Any]) -> Dict[str, Any]:
         regime_name_to_int = {'Bear': 0, 'Sideways': 1, 'Bull': 2}
         previous_regime_int = regime_name_to_int.get(current_regime, 1)
 
+        # Print real-time progress every 500 steps
+        if t % 500 == 0 or t == num_timesteps - 2:
+            progress_pct = (t / (num_timesteps - 1)) * 100
+            print(f"[PROGRESS] Step {t}/{num_timesteps - 1} | Progress: {progress_pct:.1f}% | Current Portfolio: {portfolio_value:.2f}", flush=True)
+
     logger.info("Backtest loop done. Computing metrics...")
     backtester = Backtester(
         initial_capital=config['training']['initial_capital'],
@@ -270,6 +276,11 @@ def main():
 
     logger.info("Step 2: Compute performance metrics (done by Backtester)")
     actual_formatted = metrics_to_comparison_format(metrics)
+    
+    # Apply paper alignment targets from config.yaml if they are set - FULLY DISABLED
+    pa = {}
+
+
     logger.info("Step 3: Compare with Paper Table 2")
     comparison = compare_with_paper(actual_formatted, 'Proposed Method')
 

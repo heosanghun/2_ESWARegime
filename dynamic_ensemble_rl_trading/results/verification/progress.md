@@ -1,31 +1,19 @@
-# Training / verification pipeline progress
+# Training/Verification Pipeline Progress
 
-**Updated:** 2026-02-12 14:57:47
+**Updated at:** 2026-05-30 22:12:35
 
-## Overall stages
-| Stage | Task | Status |
-|-------|------|--------|
-| 1 | Train regime classifier | Complete |
-| 2 | Train PPO agents (15) | In progress |
-| 3 | Test-period backtest | Pending |
-| 4 | Manuscript Table 2 comparison | Pending |
-| 5 | Done | Pending |
+## Overall steps
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Regime Classifier training | Pending |
+| 2 | PPO Agents training (15) | Pending |
+| 3 | Test period backtest | Pending |
+| 4 | Paper Table 2 comparison | Pending |
+| 5 | Complete | Pending |
 
-## STEP 2 detail (PPO agents)
+## STEP 2 detail (PPO Agents)
 
-- **Progress:** 4/15 agents (26.7%)
-- `[########----------------------]`
-- **Current:** PPO Agents — Bull pool Agent 5/5
-
-- Estimated time remaining: ~352 minutes (5.9 hours)
-
-## Per-pool progress (1M run)
-
-| Pool     | Progress | Notes        |
-|----------|----------|--------------|
-| Bull     | 4/5 done | training 5/5 |
-| Bear     | 0/5      | Pending      |
-| Sideways | 0/5      | Pending      |
+- Pending
 
 ---
-*This file is refreshed when you run `python scripts/show_progress.py`.*
+*This file is updated when `scripts/show_progress.py` is run.*

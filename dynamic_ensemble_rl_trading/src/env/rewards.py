@@ -62,7 +62,7 @@ class RegimeRewardCalculator:
         transaction_cost: float = 0.0005,  # 0.05%
         risk_free_rate: float = 0.0,
         reward_scale: float = 100.0,  # Scale rewards for hourly data
-        direction_bonus_coef: float = 3.0,  # alpha for w*r term
+        direction_bonus_coef: float = 0.15,  # alpha for w*r term (capped below 0.20 to prevent Reward Hacking)
         cost_coef: float = 1.0,
         regime_shaping_coef: float = 0.2,  # weight on regime-specific term
         wrong_side_penalty_coef: float = 1.5,
@@ -345,28 +345,31 @@ class RegimeRewardCalculator:
         }
 
         if regime == "bull":
-            return self.calculate_bull_reward(
+            raw_reward = self.calculate_bull_reward(
                 portfolio_value_before,
                 portfolio_value_after,
                 transaction_cost_incurred,
                 **kwargs,
             )
-        if regime == "bear":
-            return self.calculate_bear_reward(
+        elif regime == "bear":
+            raw_reward = self.calculate_bear_reward(
                 portfolio_value_before,
                 portfolio_value_after,
                 transaction_cost_incurred,
                 **kwargs,
             )
-        if regime == "sideways":
-            return self.calculate_sideways_reward(
+        elif regime == "sideways":
+            raw_reward = self.calculate_sideways_reward(
                 portfolio_value_before,
                 portfolio_value_after,
                 transaction_cost_incurred,
                 **kwargs,
+            )
+        else:
+            raise ValueError(
+                f"Unknown regime: {regime}. Must be 'Bull', 'Bear', or 'Sideways'"
             )
 
-        raise ValueError(
-            f"Unknown regime: {regime}. Must be 'Bull', 'Bear', or 'Sideways'"
-        )
+        # Volatility-adjusted reward clipping to stabilize policy gradient descent and prevent outliers
+        return float(np.clip(raw_reward, -10.0, 10.0))
 

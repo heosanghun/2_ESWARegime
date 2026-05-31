@@ -1,7 +1,7 @@
 data:
   chart_images_path: data/charts
   news_path: data/cryptonews_2021-10-12_2023-12-19.csv
-  ohlcv_path: data/raw/btcusdt_1h.csv
+  ohlcv_path: data/raw/btcusdt_4h.csv
   processed_path: data/processed/
 ensemble:
   num_agents_per_pool: 5
@@ -48,7 +48,8 @@ hyperparameters:
     initial_balance: 10000.0
     max_position: 1.0
   ppo:
-    batch_size: 64
+    batch_size: 256
+    device: cpu
     clip_range: 0.2
     ent_coef: 0.01
     gae_lambda: 0.95
@@ -86,7 +87,7 @@ hyperparameters:
     max_epochs: 30
     patience: 5
     random_state: 42
-    device: cpu
+    device: cuda
   training:
     eval_freq: 10000
     log_interval: 10
@@ -107,20 +108,24 @@ models:
   regime_classifier: models/regime_classifier/
 paper_alignment:
   blend_buy_and_hold: 0.0
-  cagr_annualization_years: 2.33
+  cagr_annualization_years: null
   invert_actions: false
   sharpe_report_cap: null
+  sharpe_report_target: null
   win_rate_report_target: null
   profit_factor_report_target: null
   max_drawdown_report_target: null
+  cumulative_return_report_target: null
+  cagr_report_target: null
   low_confidence_neutral: false
-  low_confidence_threshold: 0.45
-  max_drawdown: 0.15
+  low_confidence_threshold: null
+  max_drawdown: null
   position_scale: 1.0
-  recovery_threshold: 0.08
+  recovery_threshold: null
   use_drawdown_breaker: false
 ppo:
-  batch_size: 64
+  batch_size: 256
+  device: cpu
   clip_range: 0.2
   ent_coef: 0.01
   gae_lambda: 0.95
@@ -139,21 +144,31 @@ regime:
   bear_threshold: -0.0005
   bull_threshold: 0.0005
   confidence_threshold: 0.35
-  prob_ema_span: 0
-  routing_mode: hard
-  classifier_backend: xgboost
+  prob_ema_span: 12
+  routing_mode: soft
+  classifier_backend: lstm
   sequence_window: 48
   atr_sideways_filter:
     enabled: false
     threshold: 0.005
     window: 14
+  whipsaw_filter:
+    enabled: true
+    ema_lambda: 0.25
+    gate_threshold: 0.25
+  risk_management:
+    confidence_gating: true
+    volatility_targeting:
+      enabled: true
+      target_vol: 0.25
+      lookback: 24
   sma_window: 50
   label_method: trend_scanning
   # causal_trend_scanning = backward Trend Scanning (no lookahead)
   trend_scanning:
     horizon_min: 5
     horizon_max: 20
-    t_threshold: 2.5
+    t_threshold: 1.5
 regime_classifier:
   # XGBoost v1 defaults for the reward-only-v2 isolation run.
   # This block holds the classifier at the v1 hyperparameter values
@@ -199,9 +214,9 @@ training:
     max_slip: 0.005
   conservative_slippage:
     rate: 0.001
-  test_end_date: '2023-12-19'
-  test_start_date: '2023-06-19'
+  test_end_date: '2026-05-30'
+  test_start_date: '2025-05-31'
   total_timesteps: 1000000
-  train_end_date: '2023-06-19'
-  train_start_date: '2021-10-12'
+  train_end_date: '2025-05-31'
+  train_start_date: '2017-08-17'
   transaction_fee: 0.0005

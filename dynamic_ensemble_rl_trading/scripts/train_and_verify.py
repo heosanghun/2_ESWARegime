@@ -333,6 +333,7 @@ def step2_train_ppo_agents(cfg, train_states=None):
         'vf_coef': ppo_hp.get('vf_coef', 0.5),
         'max_grad_norm': ppo_hp.get('max_grad_norm', 0.5),
         'policy_kwargs': pk,
+        'device': ppo_hp.get('device', 'cpu'),
     }
 
     am = HierarchicalAgentManager(
@@ -474,6 +475,8 @@ def step3_backtest(cfg):
     regime_switch_count = 0
     sideways_steps = 0
     atr_filter_steps = 0
+    prev_smoothed_weight = 0.0
+    active_weight = 0.0
 
     atr_filter_cfg = cfg.get("regime", {}).get("atr_sideways_filter", {}) or {}
     atr_filter_enabled = bool(atr_filter_cfg.get("enabled", False))
@@ -485,6 +488,25 @@ def step3_backtest(cfg):
         logger.info(
             "ATR sideways filter ON: threshold=%.2f%% (ATR/Close)",
             atr_threshold * 100,
+        )
+
+    # Volatility Targeting precomputation
+    rm_cfg = cfg.get("regime", {}).get("risk_management", {}) or {}
+    vt_cfg = rm_cfg.get("volatility_targeting", {}) or {}
+    vt_enabled = bool(vt_cfg.get("enabled", False))
+    rolling_vol_series = None
+    if vt_enabled:
+        lookback = int(vt_cfg.get("lookback", 24))
+        pct_change = ohlcv['close'].pct_change()
+        rolling_std = pct_change.rolling(lookback).std()
+        mean_std = rolling_std.mean()
+        if pd.isna(mean_std) or mean_std <= 0:
+            mean_std = 0.01
+        rolling_vol_series = rolling_std.fillna(mean_std)
+        logger.info(
+            "Volatility targeting ENABLED: lookback=%d, target_vol=%.2f%%",
+            lookback,
+            float(vt_cfg.get("target_vol", 0.15)) * 100,
         )
 
     timestamps = state_data.index
@@ -551,13 +573,43 @@ def step3_backtest(cfg):
         # and position_scale are paper_alignment-era knobs that distort
         # the policy in long-short mode, so they are only applied in
         # legacy (non-raw) runs.
-        w = WEIGHT_MAP.get(action, 0.0)
+        # True Soft Expected-Weight Blending
+        if soft_et is not None:
+            w = float(er.get('expected_weight', WEIGHT_MAP.get(action, 0.0)))
+        else:
+            w = WEIGHT_MAP.get(action, 0.0)
+
+        # Confidence Gating
+        conf_gating_enabled = bool(rm_cfg.get("confidence_gating", False))
+        if conf_gating_enabled:
+            w = w * regime_conf
+
+        # Volatility Targeting scaling
+        if vt_enabled and rolling_vol_series is not None:
+            target_vol = float(vt_cfg.get("target_vol", 0.15))
+            rolling_std_step = float(rolling_vol_series.loc[ts])
+            rolling_std_ann = rolling_std_step * np.sqrt(6 * 365.25)
+            if rolling_std_ann > 1e-6:
+                w = w * (target_vol / rolling_std_ann)
+
         if max_pos is not None:
             w = max(-max_pos, min(max_pos, w))
         if blend_bh > 0:
             w = (1.0 - blend_bh) * w + blend_bh * 1.0
         if position_scale != 1.0:
             w = max(-3.0, min(3.0, w * position_scale))
+
+        # Whipsaw Filter (Acoustic Dampener)
+        whipsaw_cfg = cfg.get("regime", {}).get("whipsaw_filter", {}) or {}
+        whipsaw_enabled = bool(whipsaw_cfg.get("enabled", True))
+        if whipsaw_enabled:
+            ema_lambda = float(whipsaw_cfg.get("ema_lambda", 0.15))
+            gate_threshold = float(whipsaw_cfg.get("gate_threshold", 0.25))
+            prev_smoothed_weight = ema_lambda * w + (1.0 - ema_lambda) * prev_smoothed_weight
+            if abs(prev_smoothed_weight - active_weight) >= gate_threshold:
+                active_weight = prev_smoothed_weight
+            w = active_weight
+
         effective_weight = float(w)
         # Map continuous weight back to the closest discrete action in
         # [-1, +1] / 0.5 step (5 levels).
@@ -683,28 +735,9 @@ def step4_compare(results, cfg=None, raw=False):
         'Profit Factor': m['profit_factor'],
     }
     # Apply paper reporting alignment when raw=False (legacy)
-    pa = {} if raw else (cfg.get('paper_alignment') or {})
+    # Apply paper reporting alignment when raw=False (legacy) - FULLY DISABLED
+    pa = {}
 
-    def _get(key):
-        v = pa.get(key)
-        # YAML "null" → None; treat empty string as None too
-        if v is None or (isinstance(v, str) and v.strip() == ""):
-            return None
-        return v
-
-    cagr_years = _get('cagr_annualization_years')
-    if cagr_years is not None and float(cagr_years) > 0:
-        cum = actual['Cumulative Return']
-        actual['CAGR'] = (1.0 + cum) ** (1.0 / float(cagr_years)) - 1.0
-    sharpe_cap = _get('sharpe_report_cap')
-    if sharpe_cap is not None and actual.get('Sharpe Ratio') is not None:
-        actual['Sharpe Ratio'] = min(float(actual['Sharpe Ratio']), float(sharpe_cap))
-    if _get('win_rate_report_target') is not None:
-        actual['Win Rate'] = float(pa['win_rate_report_target'])
-    if _get('profit_factor_report_target') is not None:
-        actual['Profit Factor'] = float(pa['profit_factor_report_target'])
-    if _get('max_drawdown_report_target') is not None:
-        actual['Maximum Drawdown'] = float(pa['max_drawdown_report_target'])
 
     def consistency(paper, actual_val):
         if actual_val is None:

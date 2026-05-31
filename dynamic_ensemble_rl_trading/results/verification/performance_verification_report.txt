@@ -1,24 +1,24 @@
 ================================================================================
 Full Pipeline - Performance Verification Report
-2026-02-12 10:01:36
+2026-05-31 15:13:00
 ================================================================================
 
 1. Actual performance (Proposed Method)
 --------------------------------------------------------------------------------
-  cumulative_return: 0.97190796926828
-  cagr: 2.9361189121797993
-  sharpe_ratio: 3.083364719272406
-  max_drawdown: -1.0
-  win_rate: 0.25984251968503935
-  profit_factor: 42.744603689770216
+  cumulative_return: -0.5287327033111128
+  cagr: -0.530925201657632
+  sharpe_ratio: -4.338471535413085
+  max_drawdown: -0.5450257690593165
+  win_rate: 0.3568483737975263
+  profit_factor: 0.8523833817003884
 
 2. Comparison with Paper Table 2 (Proposed Method)
 --------------------------------------------------------------------------------
-  Sharpe Ratio: paper=2.45, actual=3.083364719272406 [MISMATCH]
-  Cumulative Return: paper=1.23, actual=0.97190796926828 [MISMATCH]
-  CAGR: paper=0.41, actual=2.9361189121797993 [MISMATCH]
-  Maximum Drawdown: paper=-0.15, actual=-1.0 [MISMATCH]
-  Win Rate: paper=0.58, actual=0.25984251968503935 [MISMATCH]
-  Profit Factor: paper=2.1, actual=42.744603689770216 [MISMATCH]
+  Sharpe Ratio: paper=1.89, actual=-4.338471535413085 [MISMATCH]
+  Cumulative Return: paper=0.893, actual=-0.5287327033111128 [MISMATCH]
+  CAGR: paper=0.342, actual=-0.530925201657632 [MISMATCH]
+  Maximum Drawdown: paper=-0.162, actual=-0.5450257690593165 [MISMATCH]
+  Win Rate: paper=0.678, actual=0.3568483737975263 [MISMATCH]
+  Profit Factor: paper=2.34, actual=0.8523833817003884 [MISMATCH]
 
 ================================================================================

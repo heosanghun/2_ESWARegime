@@ -95,6 +95,9 @@ class SoftRoutingEnsemble:
             blended += p_r * pi_r
 
         blended = blended / (blended.sum() + 1e-10)
+        weight_levels = np.array([-1.0, -0.5, 0.0, 0.5, 1.0], dtype=np.float64)
+        expected_weight = float(np.sum(blended * weight_levels))
+
         action = int(np.argmax(blended))
         dominant_regime = REGIME_ORDER[int(np.argmax(regime_probs))]
 
@@ -105,4 +108,5 @@ class SoftRoutingEnsemble:
             "pool_probs": pool_probs,
             "dominant_regime": dominant_regime,
             "weights": regime_probs.tolist(),
+            "expected_weight": expected_weight,
         }

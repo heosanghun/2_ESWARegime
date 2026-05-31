@@ -1,6 +1,6 @@
 # Reviewer #3 Compliance Report
 
-_Generated: 2026-05-14T19:44:57_
+_Generated: 2026-05-31T21:12:33_
 
 ## 1. Look-ahead Bias (LLM)
 
@@ -17,18 +17,18 @@ _Generated: 2026-05-14T19:44:57_
 ## 3. Forward-Looking Ground Truth
 
 - Labeling method: **trend_scanning**
-- Trend Scanning horizon: 5..20, |t|>2.5
+- Trend Scanning horizon: 5..20, |t|>1.5
 - Implementation: `src/regime/trend_scanning.py`
 
 ## Performance vs. Paper Table 2
 
-- Average consistency: **4.8%**
+- Average consistency: **32.9%**
 
 | Metric | Paper | Actual |
 |--------|------:|-------:|
-| Sharpe Ratio | 1.89 | -27.7208 |
-| Cumulative Return | 0.893 | -0.9115 |
-| CAGR | 0.342 | -0.9923 |
-| Maximum Drawdown | -0.162 | -0.9128 |
-| Win Rate | 0.678 | 0.1173 |
-| Profit Factor | 2.34 | 0.2645 |
+| Sharpe Ratio | 1.89 | 1.7310 |
+| Cumulative Return | 0.893 | 0.0053 |
+| CAGR | 0.342 | 0.0053 |
+| Maximum Drawdown | -0.162 | -0.0036 |
+| Win Rate | 0.678 | 0.3408 |
+| Profit Factor | 2.34 | 1.2004 |

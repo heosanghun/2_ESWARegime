@@ -11,7 +11,33 @@ import logging
 
 from .ppo_agent import PPOAgent
 
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
+
 logger = logging.getLogger(__name__)
+
+class PPOProgressCallback(BaseCallback):
+    def __init__(self, pool_name, agent_idx, total_timesteps, verbose=0):
+        super().__init__(verbose)
+        self.pool_name = pool_name
+        self.agent_idx = agent_idx
+        self.total_timesteps = total_timesteps
+        self.last_print_time = 0.0
+        
+    def _on_step(self) -> bool:
+        import time
+        now = time.time()
+        if self.last_print_time == 0.0:
+            self.last_print_time = now
+        # Print progress every 30 seconds
+        if now - self.last_print_time >= 30.0 or self.num_timesteps == 1 or self.num_timesteps >= self.total_timesteps:
+            current_step = self.num_timesteps
+            agent_pct = (current_step / self.total_timesteps) * 100
+            bar_len = 20
+            filled = int(bar_len * current_step / self.total_timesteps)
+            bar = "#" * filled + "-" * (bar_len - filled)
+            print(f"[PPO Training Progress] [{bar}] Pool: {self.pool_name} | Agent {self.agent_idx+1}/5 | Step: {current_step}/{self.total_timesteps} ({agent_pct:.1f}%) | Elapsed: {now - self.last_print_time:.1f}s", flush=True)
+            self.last_print_time = now
+        return True
 
 
 class PPOAgentPool:
@@ -94,9 +120,14 @@ class PPOAgentPool:
         
         for i, agent in enumerate(self.agents):
             logger.info(f"Training agent {i+1}/{self.num_agents}")
+            pool_name = getattr(self, 'pool_name', 'Default')
+            progress_cb = PPOProgressCallback(pool_name=pool_name, agent_idx=i, total_timesteps=total_timesteps)
+            active_cb = progress_cb
+            if callback is not None:
+                active_cb = CallbackList([progress_cb, callback])
             agent.train(
                 total_timesteps=total_timesteps,
-                callback=callback,
+                callback=active_cb,
                 log_interval=log_interval
             )
         
