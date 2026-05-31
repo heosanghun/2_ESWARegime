@@ -11,16 +11,8 @@ environment:
   action_space_size: 5
   initial_balance: 10000.0
   max_position: 1.0
-  # Paper Section 3.1 / 4.1: Sell / Strong Sell open SHORT positions in a
-  # perpetual-futures venue. Set false for the long-only ablation. The
-  # walk-forward analysis was run with allow_short: true.
   allow_short: true
 features:
-  # ── reward-only v2 isolation run (May 2026) ────────────────────────
-  # For the 1M-timesteps walk-forward run that isolates the reward
-  # contribution: visual ON (v1 feature pipeline), classifier v1
-  # defaults below. This way the only delta vs the v1 baseline run
-  # is the reward function (src/env/rewards.py).
   use_visual: true
   sentiment:
     aggregation_window: 24
@@ -65,8 +57,6 @@ hyperparameters:
       - 256
     vf_coef: 0.5
   regime_classifier:
-    # v1 defaults for the reward-only-v2 isolation run.
-    # (See top-level regime_classifier block — same values mirrored.)
     colsample_bytree: 1.0
     learning_rate: 0.3
     max_depth: 6
@@ -92,12 +82,6 @@ hyperparameters:
     eval_freq: 10000
     log_interval: 10
     save_freq: 50000
-    # ── reward-only v2 isolation run (May 2026) ──────────────────────
-    # 1 M timesteps per PPO agent so PPO seed instability has the
-    # opportunity to damp out (per AUTONOMOUS_FINAL_SYNTHESIS.md
-    # finding: 30k → 1M shrinks Sharpe seed-spread from 21.4 to 1.76
-    # on the single-split benchmark). Walk-forward 5-fold at 1M ≈ 40
-    # wall-clock hours on the development workstation.
     total_timesteps: 1000000
 logging:
   level: INFO
@@ -154,30 +138,21 @@ regime:
     window: 14
   whipsaw_filter:
     enabled: true
-    ema_lambda: 0.15
-    gate_threshold: 0.15
+    ema_lambda: 0.25
+    gate_threshold: 0.25
   risk_management:
     confidence_gating: true
     volatility_targeting:
       enabled: true
-      target_vol: 0.15
+      target_vol: 0.25
       lookback: 24
   sma_window: 50
   label_method: trend_scanning
-  # causal_trend_scanning = backward Trend Scanning (no lookahead)
   trend_scanning:
     horizon_min: 5
     horizon_max: 20
     t_threshold: 1.5
 regime_classifier:
-  # XGBoost v1 defaults for the reward-only-v2 isolation run.
-  # This block holds the classifier at the v1 hyperparameter values
-  # so that the only difference between this run and the original v1
-  # walk-forward baseline is the reward function (src/env/rewards.py).
-  # Restore the v2 values below when reproducing the full-v2 run:
-  #   max_depth: 4,  n_estimators: 200,  learning_rate: 0.05,
-  #   colsample_bytree: 0.7,  subsample: 0.8,  reg_lambda: 1.0,
-  #   early_stopping_rounds: 30
   colsample_bytree: 1.0
   learning_rate: 0.3
   max_depth: 6

@@ -1,6 +1,6 @@
 # Reviewer #3 Compliance Report
 
-_Generated: 2026-05-31T21:12:33_
+_Generated: 2026-05-31T23:13:29_
 
 ## 1. Look-ahead Bias (LLM)
 
@@ -22,13 +22,13 @@ _Generated: 2026-05-31T21:12:33_
 
 ## Performance vs. Paper Table 2
 
-- Average consistency: **32.9%**
+- Average consistency: **22.2%**
 
 | Metric | Paper | Actual |
 |--------|------:|-------:|
-| Sharpe Ratio | 1.89 | 1.7310 |
-| Cumulative Return | 0.893 | 0.0053 |
-| CAGR | 0.342 | 0.0053 |
-| Maximum Drawdown | -0.162 | -0.0036 |
-| Win Rate | 0.678 | 0.3408 |
-| Profit Factor | 2.34 | 1.2004 |
+| Sharpe Ratio | 1.89 | 0.6110 |
+| Cumulative Return | 0.893 | 0.0020 |
+| CAGR | 0.342 | 0.0020 |
+| Maximum Drawdown | -0.162 | -0.0073 |
+| Win Rate | 0.678 | 0.3481 |
+| Profit Factor | 2.34 | 1.0324 |
