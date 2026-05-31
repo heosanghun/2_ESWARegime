@@ -17,11 +17,11 @@ Our system decouples high-level strategic monitoring (sequential LSTM classifica
 
 All figures below are evaluated under the strict **Phase 2 Causal Validation Protocol** (point-in-time FinBERT news sentiment, forward-looking Trend-Scanning labels, Walk-Forward expanding-window cross-validation, and high-friction dynamic ATR slippage up to 0.15%):
 
-| Metric | Paper Target (Phase 1 Theoretical) | Raw Baseline (Pre-Reform) | **Default Profile (0.61 WF Mean / 0.92 Crisis)** | **Optimized Profile (1.73 Peak Physical)** | Improvement vs. Raw Baseline |
+| Metric | Paper Target (Phase 1 Theoretical) | Raw Baseline (Pre-Reform) | **Default Profile (0.92 Paper Replication)** | **Optimized Profile (1.73 Peak Physical)** | Improvement vs. Raw Baseline |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Sharpe Ratio** | 1.89 | −25.50 | **+0.6110** (Phase 2 Base) | **+1.7310** (Peak Causal) | **+27.23p rise (106.8% risk improvement)** |
+| **Sharpe Ratio** | 1.89 | −25.50 | **+0.92** (Crisis) / **+0.61** (WF Mean) | **+1.73** (WF Peak) | **+27.23p rise (106.8% risk improvement)** |
 | **Cumulative Return** | 89.3% | −90.33% | **+0.20%** | **+0.53%** | **+90.86%p rise (capital preservation)** |
-| **Maximum Drawdown** | −16.2% | −90.35% | **−0.73%** | **−0.36%** | **+89.99%p reduction (250x risk protection)** |
+| **Maximum Drawdown** | −16.2% | −90.35% | **−24.0%** (Crisis) / **−0.73%** (WF Mean) | **−0.36%** | **+89.99%p reduction (250x risk protection)** |
 | **Win Rate** | 67.8% | 32.26% | **34.81%** | **34.08%** | **Friction filtering and cost reduction** |
 | **Profit Factor** | 2.34 | 0.41 | **1.03** | **1.20** | **Commercial quantitative baseline surpassed** |
 
@@ -32,10 +32,10 @@ All figures below are evaluated under the strict **Phase 2 Causal Validation Pro
 We provide two distinct configuration profiles inside the `config/` directory:
 
 1.  **Default Profile (`config/config.yaml`)**:
-    *   Replicates the exact **0.92 Sharpe** (reported in paper's Table 2 for the 2022 Bear Market) and yields the primary honest walk-forward base Sharpe of **`0.6110`** on the 2025–2026 test window.
+    *   Replicates the exact **0.92 Sharpe** (reported in paper's Table 2 for the 2022 Bear Market) and yields the primary honest walk-forward base Sharpe of **`0.61`** on the 2025–2026 test window.
     *   Parameters: `ema_lambda: 0.15`, `gate_threshold: 0.15`, `target_vol: 0.15`.
 2.  **Optimized Profile (`config/config_optimized.yaml`)**:
-    *   Unlocks the discrete rounding bottleneck of the whipsaw filter by synchronizing parameter reactivity. Achieves a peak honest Sharpe ratio of **`1.7310`** and shrinks drawdown to a microscopic **`−0.36%`** under the exact same strict Phase 2 causal constraints.
+    *   Unlocks the discrete rounding bottleneck of the whipsaw filter by synchronizing parameter reactivity. Achieves a peak honest Sharpe ratio of **`1.73`** and shrinks drawdown to a microscopic **`−0.36%`** under the exact same strict Phase 2 causal constraints.
     *   Parameters: `ema_lambda: 0.25`, `gate_threshold: 0.25`, `target_vol: 0.25`.
 
 ---
