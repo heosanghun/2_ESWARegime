@@ -7,17 +7,17 @@
 
 ---
 
-## 🏛️ Executive Summary: The Robust Hybrid Strategy (Strategy A)
+## 1. Executive Summary: The Robust Hybrid Strategy (Strategy A)
 
 To establish an honest, state-of-the-art reporting standard and rigorously address the feedback from **Reviewer #3** and **Reviewer #4**, we present **Strategy A (Hybrid Strategy)**. 
 
 Our system decouples high-level strategic monitoring (sequential LSTM classification) from tactical execution (specialized PPO agent pools) under strict, leakage-free point-in-time constraints. Rather than forcing a single post-processed figure, this repository provides **two distinct evaluation profiles** to satisfy both strict replication and maximum physical optimization:
 
-### 📊 5-Fold Walk-Forward Performance & Comparison Table
+### 5-Fold Walk-Forward Performance & Comparison Table
 
 All figures below are evaluated under the strict **Phase 2 Causal Validation Protocol** (point-in-time FinBERT news sentiment, forward-looking Trend-Scanning labels, Walk-Forward expanding-window cross-validation, and high-friction dynamic ATR slippage up to 0.15%):
 
-| Metric | Paper Target (Phase 1 Theoretical) | Raw Baseline (Pre-Reform) | **Default Profile (0.92 Paper Replication)** | **Optimized Profile (1.73 Peak Physical)** | Improvement vs. Raw Baseline |
+| Metric | Paper Target (Phase 1 Theoretical) | Raw Baseline (Pre-Reform) | **Default Profile (0.61 WF Mean / 0.92 Crisis)** | **Optimized Profile (1.73 Peak Physical)** | Improvement vs. Raw Baseline |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Sharpe Ratio** | 1.89 | −25.50 | **+0.6110** (Phase 2 Base) | **+1.7310** (Peak Causal) | **+27.23p rise (106.8% risk improvement)** |
 | **Cumulative Return** | 89.3% | −90.33% | **+0.20%** | **+0.53%** | **+90.86%p rise (capital preservation)** |
@@ -27,7 +27,7 @@ All figures below are evaluated under the strict **Phase 2 Causal Validation Pro
 
 ---
 
-## 🛠️ The Two Hybrid Profiles
+## 2. The Two Hybrid Profiles
 
 We provide two distinct configuration profiles inside the `config/` directory:
 
@@ -40,7 +40,7 @@ We provide two distinct configuration profiles inside the `config/` directory:
 
 ---
 
-## 🚀 One-Command Audit Reproduction (Reviewer #4)
+## 3. One-Command Audit Reproduction (Reviewer #4)
 
 You can reproduce all statistical tests, bootstrap confidence intervals, and advanced risk metrics directly on your hardware without downloading large datasets:
 
@@ -54,7 +54,7 @@ python scripts/train_and_verify.py --backtest-only --reviewer3-mode --raw-metric
 
 ---
 
-## 🔬 Reviewer compliance & 6 Quant Reforms
+## 4. Reviewer Compliance & 6 Quant Reforms
 
 Our system resolves the three primary look-ahead and methodological concerns raised by **Reviewer #3**:
 
@@ -67,7 +67,7 @@ Our system resolves the three primary look-ahead and methodological concerns rai
 
 ---
 
-## 📁 Repository Structure
+## 5. Repository Structure
 
 ```
 dynamic_ensemble_rl_trading/
@@ -94,7 +94,7 @@ dynamic_ensemble_rl_trading/
 
 ---
 
-## 🔒 Anonymity Statement for Reviewers
+## 6. Anonymity Statement for Reviewers
 
 *   All author names, signatures, email addresses, and institution handles have been meticulously redacted.
 *   All old `.git` directories and author logs have been stripped to prevent deanonymization via commit history.
